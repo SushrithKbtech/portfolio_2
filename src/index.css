@@ -99,10 +99,12 @@ h1 span{display:block}
 .cap i{font-style:normal;color:var(--hot);font-size:.56rem;letter-spacing:.3em;display:block;margin-bottom:.5rem}
 .cap b{font-family:var(--display);font-size:clamp(1.5rem,3.2vw,2.6rem);font-weight:400;
   display:block;letter-spacing:.04em;text-transform:uppercase;line-height:1}
-/* .64 -> .82rem, and lifted out of the murk: at the old size the project copy was decoration you
-   squinted at rather than something anyone would read. */
-.cap p{font-size:.82rem;line-height:1.75;opacity:.78;letter-spacing:.03em;margin:.85rem 0 0}
+/* .64 -> .82 -> .98rem, and lifted out of the murk: at the old size the project copy was
+   decoration you squinted at rather than something anyone would read. */
+.cap p{font-size:.98rem;line-height:1.7;opacity:.85;letter-spacing:.02em;margin:.9rem 0 0;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 
 @media (max-width:760px){
   .cap{left:4vw;right:4vw;max-width:none;text-align:left;bottom:8vh}
+  .cap p{font-size:.88rem;line-height:1.6}
 }

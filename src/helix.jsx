@@ -154,10 +154,17 @@ function Card({ sys, i, onFocus }) {
 
   return (
     <group ref={grp}>
+      {/* A DARK BACKING PLATE. The panel sits in front of a lit garden with depthWrite off, so the
+          planting was showing straight through the artwork and washing it out. This blocks it —
+          the poster now reads against near-black instead of against whatever is behind the card. */}
+      <mesh geometry={panel} position={[0, 0, -0.012]} renderOrder={1}>
+        <meshBasicMaterial color="#04060d" toneMapped={false} side={THREE.DoubleSide}
+          transparent opacity={0.94} depthWrite={false} />
+      </mesh>
       <mesh geometry={panel} renderOrder={2}
         onClick={open} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <meshBasicMaterial ref={matRef} map={poster} toneMapped={false} side={THREE.DoubleSide}
-          transparent opacity={0.9} depthWrite={false} />
+          transparent opacity={1} depthWrite={false} />
       </mesh>
     </group>
   )
