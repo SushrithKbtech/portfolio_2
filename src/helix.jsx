@@ -1,7 +1,6 @@
 import { useRef, useMemo, useEffect, useState, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
-import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise, Scanline } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import Lenis from 'lenis'
 import { SYSTEMS } from './systems'
@@ -14,7 +13,7 @@ import Backdrop from './backdrop.jsx'
 import { HeroRoom, HeroChart, SKObject } from './hero.jsx'
 import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
-import { fitZ, dpr as DPR, lite, setLite } from './device'
+import { fitZ, dpr as DPR } from './device'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -265,21 +264,6 @@ function Scene({ onFocus }) {
       <Suspense fallback={null}><Finale /></Suspense>
       {SYSTEMS.map((s,i) => <Card key={s.id} sys={s} i={i} onFocus={onFocus} />)}
 
-      {/* THE WHOLE POST STACK IS THE FIRST THING TO GO. Four full-screen passes at native
-          resolution is the single most expensive thing here on a weak GPU, and the scene still
-          reads without them — just flatter. Lite mode keeps the geometry and loses the grade. */}
-      {!lite && (
-        <EffectComposer disableNormalPass>
-          <Bloom intensity={0.72} luminanceThreshold={0.42} luminanceSmoothing={0.45} mipmapBlur radius={0.75} />
-          <ChromaticAberration offset={[0.0007,0.0011]} />
-          {/* the panel wall wants sub-pixel structure and a little dirt on the lens. Both effects
-              keep their default blend modes — importing BlendFunction from `postprocessing` pulls
-              a second copy of three into the bundle. */}
-          <Scanline density={1.35} opacity={0.05} />
-          <Noise premultiply opacity={0.14} />
-          <Vignette offset={0.28} darkness={0.82} />
-        </EffectComposer>
-      )}
     </>
   )
 }
@@ -305,37 +289,6 @@ function Whiteout() {
   return <div className="whiteout" ref={ref} />
 }
 
-
-/* THE FRAME-RATE NOTICE.
-   Rather than guessing from a user-agent string, watch the actual frame rate for three seconds
-   after the page settles. If it can't hold 30fps, say so once and offer the lighter build — two
-   lines, dismissible, and never shown again on this machine once answered. */
-function PerfNotice() {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    if (lite || localStorage.getItem('perfNoticeSeen') === '1') return
-    let raf, frames = 0
-    const started = performance.now() + 1500      // ignore the first 1.5s: that's compile and upload
-    const tick = now => {
-      if (now > started) frames++
-      if (now < started + 3000) { raf = requestAnimationFrame(tick); return }
-      if (frames / 3 < 30) setShow(true)          // under 30fps averaged over three seconds
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-  if (!show) return null
-  const dismiss = () => { localStorage.setItem('perfNoticeSeen', '1'); setShow(false) }
-  return (
-    <div className="perf">
-      <p>Running slow on this machine. There’s a lighter version with the heavy effects turned off.</p>
-      <span>
-        <button onClick={() => { localStorage.setItem('perfNoticeSeen', '1'); setLite(true) }}>Switch to lite</button>
-        <button className="ghost" onClick={dismiss}>Stay here</button>
-      </span>
-    </div>
-  )
-}
 
 const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight
 
@@ -404,7 +357,6 @@ export default function Helix() {
       </Canvas>
 
       <Whiteout />
-      <PerfNotice />
       <ContactStage />
 
       {/* act zero's chrome — the ghost triangles and the cool perimeter go with the room */}

@@ -205,17 +205,3 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
   .cs-phone{bottom:2vh}
 }
 
-/* the frame-rate notice: two lines, bottom-left, out of the way of everything else */
-.perf{position:fixed;left:22px;bottom:22px;z-index:45;max-width:330px;
-  background:rgba(8,12,24,.92);border:1px solid rgba(150,190,255,.22);border-radius:12px;
-  padding:1rem 1.1rem;backdrop-filter:blur(10px);animation:perfin .5s ease both}
-@keyframes perfin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.perf p{margin:0 0 .8rem;font-size:.74rem;line-height:1.6;color:#cfd9ef;letter-spacing:.02em;
-  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.perf span{display:flex;gap:.5rem}
-.perf button{font:inherit;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
-  padding:.5rem .9rem;border-radius:99px;cursor:pointer;
-  background:#dfe8ff;color:#0a1020;border:1px solid transparent}
-.perf button.ghost{background:transparent;color:#9fb0d6;border-color:rgba(150,190,255,.28)}
-.perf button:hover{filter:brightness(1.1)}
-@media (max-width:760px){.perf{left:12px;right:12px;bottom:12px;max-width:none}}
