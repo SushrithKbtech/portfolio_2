@@ -192,10 +192,17 @@ function Phone({ anchors }) {
 
   return (
     <group ref={rig} position={[0, 0, 0]}>
-      {/* chassis */}
-      <RoundedBox ref={body} args={[1.62, 3.3, 0.17]} radius={0.19} smoothness={6}>
-        <meshPhysicalMaterial color="#20263a" metalness={0.85} roughness={0.28}
-          clearcoat={1} clearcoatRoughness={0.2} envMapIntensity={1.6} />
+      {/* chassis — white ceramic, softly rounded.
+          Metalness stays LOW: a white metal reads as grey the moment it reflects a dark room,
+          which is all this room is. A dielectric with a wet clearcoat over it keeps the case
+          bright and still catches a highlight along the rounded edge as the handset turns. */}
+      <RoundedBox ref={body} args={[1.62, 3.3, 0.17]} radius={0.23} smoothness={8}>
+        {/* a whisper of emissive on top: in a room this dark even a white dielectric settles to
+            grey, and this holds the case at white without blowing out under the bloom pass */}
+        <meshPhysicalMaterial color="#ffffff" metalness={0.12} roughness={0.32}
+          clearcoat={1} clearcoatRoughness={0.12} envMapIntensity={1.35}
+          emissive="#e8eef8" emissiveIntensity={0.34}
+          sheen={0.5} sheenColor="#cfe0ff" />
       </RoundedBox>
       {/* screen */}
       <mesh position={[0, 0, 0.0865]}>
@@ -355,8 +362,10 @@ export default function ContactStage() {
 
       <Canvas className="cs-canvas" dpr={DPR} gl={{ antialias: true, alpha: true }}
         camera={{ position: [0, 0, 6.2], fov: 38 }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[3, 5, 6]} intensity={2.2} color="#dce9ff" />
+        <ambientLight intensity={0.85} />
+        <directionalLight position={[3, 5, 6]} intensity={2.8} color="#eef4ff" />
+        {/* a fill from below-left so the far edge of the case never falls into the background */}
+        <directionalLight position={[-4, -2, 4]} intensity={0.9} color="#9fc0ff" />
         <Environment resolution={128}>
           <Lightformer form="rect" intensity={2.6} position={[0, 4, 5]} scale={[7, 3, 1]} color="#ffffff" />
           <Lightformer form="rect" intensity={2.0} position={[-5, 0, 3]} scale={[2, 7, 1]} color="#6f8bff" />
