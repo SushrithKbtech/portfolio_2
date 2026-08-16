@@ -394,6 +394,10 @@ export default function Helix() {
   }
   return (
     <>
+      {/* FIXED pixel ratio, deliberately. An adaptive monitor was tried here and made things far
+          worse: every step re-allocated the renderer's targets and the composer's buffers, and the
+          churn dragged a 47fps scene down to single digits within seconds. One conservative ratio,
+          chosen per device class, costs nothing to maintain. */}
       <Canvas className="gl" dpr={DPR} gl={{ antialias:true, powerPreference:'high-performance' }}
         camera={{ position:[0,0,11.4], fov:38, near:0.1, far:260 }}>
         <Suspense fallback={null}><Rig /><Scene onFocus={setFocus} /></Suspense>

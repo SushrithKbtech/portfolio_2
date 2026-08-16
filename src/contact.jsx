@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, RoundedBox } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
@@ -291,6 +291,11 @@ function Dust() {
 
 export default function ContactStage() {
   const stage = useRef()
+  /* THE SECOND RENDERER WAS ALWAYS RUNNING. This canvas — its own scene, its own bloom pass, its
+     own dust — was drawing every frame for the entire scroll, including the ~76% of it where the
+     stage is fully transparent and nothing it draws can be seen. It now renders only once the
+     close has begun. */
+  const [live, setLive] = useState(false)
   const labels = useRef([])
   const lines = useRef([])
   const numRef = useRef()
@@ -349,6 +354,8 @@ export default function ContactStage() {
         el.style.opacity = v.toFixed(3)
         el.style.visibility = v > 0.004 ? 'visible' : 'hidden'
         el.style.pointerEvents = v > 0.6 ? 'auto' : 'none'
+        // flips at the threshold only, so this isn't a setState every frame
+        setLive(prev => (prev === v > 0.004 ? prev : v > 0.004))
       }
       raf = requestAnimationFrame(tick)
     }
@@ -361,6 +368,7 @@ export default function ContactStage() {
       <p className="cs-kicker">Get in touch</p>
 
       <Canvas className="cs-canvas" dpr={DPR} gl={{ antialias: true, alpha: true }}
+        frameloop={live ? 'always' : 'never'}
         camera={{ position: [0, 0, 6.2], fov: 38 }}>
         <ambientLight intensity={0.85} />
         <directionalLight position={[3, 5, 6]} intensity={2.8} color="#eef4ff" />

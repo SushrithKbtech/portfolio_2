@@ -219,7 +219,10 @@ export default function Garden() {
         vA = (0.45 + 0.55 * sin(aRnd * 20.0 + uT * 1.1)) * (0.25 + 0.75 * b)
              * smoothstep(2.5, 9.0, depth) * (1.0 - smoothstep(46.0, 72.0, depth))
              * (1.0 + uFlash * 0.9);   // the boom: everything overexposes for a beat as it goes
-        gl_PointSize = min(aSize * uPix * (125.0 / max(depth, 0.001)), 17.0 * uPix);
+        // 17 -> 9. THE SINGLE BIGGEST COST IN THE SCENE: a quarter of a million additive points
+        // at up to 17*dpr pixels across is many screens' worth of overdraw every frame, and the
+        // blend means none of it can be depth-rejected. Halving the cap quarters the fill.
+        gl_PointSize = min(aSize * uPix * (125.0 / max(depth, 0.001)), 9.0 * uPix);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `

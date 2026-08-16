@@ -39,7 +39,10 @@ export const budget = (isPhone ? 0.4 : isTablet ? 0.65 : 1) * (lite ? 0.33 : 1)
 
 // cap the pixel ratio harder on the small stuff — a 3x phone screen is the most expensive canvas
 // in the room and the least able to pay for it
-export const dpr = lite ? [1, 1] : isPhone ? [1, 1.6] : isTablet ? [1, 1.8] : [1, 2]
+/* The ceiling, not the setting — helix.jsx walks the live value up and down from here based on
+   measured frame rate. 2.0 was costing four times the shading of 1.0 for a difference you cannot
+   see once bloom has softened everything anyway. */
+export const dpr = lite ? [1, 1] : isPhone ? [1, 1.4] : isTablet ? [1, 1.5] : [1, 1.75]
 
 const REFERENCE = 16 / 9
 

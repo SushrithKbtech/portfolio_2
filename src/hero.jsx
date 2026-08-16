@@ -505,8 +505,11 @@ function Glass({ geometry }) {
           scatters what's behind into a fogged bloom — under a clearcoat left slick and beaded at
           0.12, which is exactly the split you see on a cold window: misted body, wet surface.
           The crawling distortion is the water finding its way down. */}
+      {/* samples 10 -> 5 and buffer 512 -> 256: this material re-renders the scene into an
+          off-screen target every single frame, and at these sizes the difference is invisible
+          through frosted glass but halves the cost of the hero. */}
       <MeshTransmissionMaterial ref={mat} transparent
-        samples={10} resolution={512} thickness={0.85} ior={1.29} chromaticAberration={0.05}
+        samples={5} resolution={256} thickness={0.85} ior={1.29} chromaticAberration={0.05}
         anisotropy={0.35} distortion={0.5} distortionScale={0.7} temporalDistortion={0.3}
         roughness={0.3} clearcoat={1} clearcoatRoughness={0.12}
         attenuationDistance={5.5} attenuationColor="#6f9dff"
