@@ -16,12 +16,30 @@ export const isTouch = typeof window !== 'undefined' &&
 export const isPhone = typeof window !== 'undefined' && window.innerWidth < 760
 export const isTablet = typeof window !== 'undefined' && window.innerWidth >= 760 && window.innerWidth < 1100
 
-// full budget on a desktop, ~40% on a phone, ~65% on a tablet
-export const budget = isPhone ? 0.4 : isTablet ? 0.65 : 1
+/* LITE MODE. Either asked for with ?lite=1, or assumed on a machine that has told us it is small:
+   four cores or fewer, or 4GB of reported memory or less. It is sticky once chosen, because a
+   visitor who switched to it should not have to switch again on the next page. */
+const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null
+const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('lite') : null
+const weak = typeof navigator !== 'undefined' &&
+  ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4)
+
+export const lite = params?.get('lite') === '1' || (params?.get('lite') !== '0' && (stored === '1' || weak))
+
+export function setLite(on) {
+  try { localStorage.setItem('lite', on ? '1' : '0') } catch { /* private mode: this session only */ }
+  const url = new URL(location.href)
+  url.searchParams.set('lite', on ? '1' : '0')
+  location.href = url.toString()
+}
+
+// full budget on a desktop, ~40% on a phone, ~65% on a tablet — and a third of whatever that
+// comes to if we're running lite
+export const budget = (isPhone ? 0.4 : isTablet ? 0.65 : 1) * (lite ? 0.33 : 1)
 
 // cap the pixel ratio harder on the small stuff — a 3x phone screen is the most expensive canvas
 // in the room and the least able to pay for it
-export const dpr = isPhone ? [1, 1.6] : isTablet ? [1, 1.8] : [1, 2]
+export const dpr = lite ? [1, 1] : isPhone ? [1, 1.6] : isTablet ? [1, 1.8] : [1, 2]
 
 const REFERENCE = 16 / 9
 

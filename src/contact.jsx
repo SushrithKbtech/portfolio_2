@@ -4,7 +4,7 @@ import { Environment, Lightformer, RoundedBox } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
-import { fitZ, dpr as DPR } from './device'
+import { fitZ, dpr as DPR, lite } from './device'
 
 /* THE CLOSING ACT — a handset you can turn, with the four ways to reach me on it.
    The flat mock-up this replaces was a picture of a phone; this is an object. It is lit, it has
@@ -373,11 +373,13 @@ export default function ContactStage() {
         </Environment>
         <Dust />
         <Phone anchors={anchors} />
-        <EffectComposer disableNormalPass>
-          <Bloom intensity={0.6} luminanceThreshold={0.5} luminanceSmoothing={0.4} mipmapBlur radius={0.6} />
-          <ChromaticAberration offset={[0.0004, 0.0006]} />
-          <Vignette offset={0.3} darkness={0.7} />
-        </EffectComposer>
+        {!lite && (
+          <EffectComposer disableNormalPass>
+            <Bloom intensity={0.6} luminanceThreshold={0.5} luminanceSmoothing={0.4} mipmapBlur radius={0.6} />
+            <ChromaticAberration offset={[0.0004, 0.0006]} />
+            <Vignette offset={0.3} darkness={0.7} />
+          </EffectComposer>
+        )}
       </Canvas>
 
       {/* On a phone there is no room either side of the handset for callouts, so the same four
