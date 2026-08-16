@@ -4,6 +4,7 @@ import { Environment, Lightformer, RoundedBox } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
+import { fitZ, dpr as DPR } from './device'
 
 /* THE CLOSING ACT — a handset you can turn, with the four ways to reach me on it.
    The flat mock-up this replaces was a picture of a phone; this is an object. It is lit, it has
@@ -152,7 +153,9 @@ function Phone({ anchors }) {
       rig.current.rotation.z = Math.sin(t * 0.2) * 0.02
       // rises into frame as the last stretch of scroll plays
       rig.current.position.y = -0.5 + c * 0.5 + Math.sin(t * 0.5) * 0.03
-      rig.current.scale.setScalar(0.86 + c * 0.14)
+      // on a narrow frame the handset is shrunk rather than the camera pulled back — pulling back
+      // would shrink the dust and the room with it and the scene would read as a doll's house
+      rig.current.scale.setScalar((0.86 + c * 0.14) / fitZ(size.width / size.height))
       rig.current.visible = c > 0.004
     }
 
@@ -350,7 +353,7 @@ export default function ContactStage() {
     <div className="contactstage" ref={stage}>
       <p className="cs-kicker">Get in touch</p>
 
-      <Canvas className="cs-canvas" dpr={[1, 2]} gl={{ antialias: true, alpha: true }}
+      <Canvas className="cs-canvas" dpr={DPR} gl={{ antialias: true, alpha: true }}
         camera={{ position: [0, 0, 6.2], fov: 38 }}>
         <ambientLight intensity={0.5} />
         <directionalLight position={[3, 5, 6]} intensity={2.2} color="#dce9ff" />
@@ -367,6 +370,20 @@ export default function ContactStage() {
           <Vignette offset={0.3} darkness={0.7} />
         </EffectComposer>
       </Canvas>
+
+      {/* On a phone there is no room either side of the handset for callouts, so the same four
+          links are listed under it instead — same hrefs, no projection maths. */}
+      <ul className="cs-list">
+        {APPS.map(a => (
+          <li key={a.id}>
+            <a href={a.href}
+               target={a.href.startsWith('http') ? '_blank' : undefined}
+               rel={a.href.startsWith('http') ? 'noopener noreferrer' : undefined}>
+              <b>{a.label}</b><i>{a.info}</i>
+            </a>
+          </li>
+        ))}
+      </ul>
 
       {/* the wires, re-anchored each frame to wherever their icon has turned to */}
       {APPS.map((a, i) => (

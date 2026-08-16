@@ -14,6 +14,7 @@ import Backdrop from './backdrop.jsx'
 import { HeroRoom, HeroChart, SKObject } from './hero.jsx'
 import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
+import { fitZ, dpr as DPR } from './device'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -164,7 +165,7 @@ function Card({ sys, i, onFocus }) {
 
 /* ---------- camera + the scroll clock everything reads from ---------- */
 function Rig() {
-  const { camera, scene } = useThree(); const m = useRef({x:0,y:0})
+  const { camera, scene, size } = useThree(); const m = useRef({x:0,y:0})
   useEffect(() => {
     const h = e => {
       m.current.x = (e.clientX/window.innerWidth-0.5)*2; m.current.y = (e.clientY/window.innerHeight-0.5)*2
@@ -204,15 +205,22 @@ function Rig() {
     const fin = scroll.fin
     if (scene.fog) scene.fog.density = 0.0016 + scroll.heroOut * 0.0044 + fin * 0.0062
 
-    camera.position.x += (m.current.x*1.5*(1 - scroll.heroOut*0.45) - camera.position.x)*0.04
-    camera.position.y += ((-m.current.y*0.9 - fin*2.4) - camera.position.y)*0.04
+    /* EVERY DISTANCE IS MULTIPLIED BY THE FIT. A portrait phone sees a far narrower slice than a
+       laptop, so at a fixed camera distance the wordmark, the column and the project panels all
+       run off the sides. Pushing the camera back by the aspect ratio keeps the same composition
+       on any shape of screen — and the parallax is damped with it, because the same pointer swing
+       is a much bigger fraction of a narrow frame. */
+    const fit = fitZ(size.width / size.height)
+
+    camera.position.x += (m.current.x*1.5*(1 - scroll.heroOut*0.45)/fit - camera.position.x)*0.04
+    camera.position.y += ((-m.current.y*0.9/fit - fin*2.4) - camera.position.y)*0.04
     /* CLOSE THROUGHOUT, and no push-in. The whole journey is shot on a long lens with the subject
        right against the glass — 11.4 at the hero, 13 through the gallery so a centred project
        panel fills the frame edge to edge, backing off only for the garden.
        The dive is gone: it made the column arrive far bigger than it is for the rest of the
        scroll, so it appeared to leap at you and then retreat. It now enters at exactly the size
        it holds through the gallery. */
-    camera.position.z = 11.4 + scroll.heroOut*1.6 + fin*7.0
+    camera.position.z = (11.4 + scroll.heroOut*1.6 + fin*7.0) * fit
     camera.lookAt(0, camera.position.y*0.25 + fin*2.6, -fin*5)
     camera.rotation.z += (m.current.x*0.02 - camera.rotation.z)*0.04
   })
@@ -342,7 +350,7 @@ export default function Helix() {
   }
   return (
     <>
-      <Canvas className="gl" dpr={[1,2]} gl={{ antialias:true, powerPreference:'high-performance' }}
+      <Canvas className="gl" dpr={DPR} gl={{ antialias:true, powerPreference:'high-performance' }}
         camera={{ position:[0,0,11.4], fov:38, near:0.1, far:260 }}>
         <Suspense fallback={null}><Rig /><Scene onFocus={setFocus} /></Suspense>
       </Canvas>

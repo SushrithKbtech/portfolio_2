@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
+import { budget } from './device'
 import Optional from './assetGuard.jsx'
 import { proceduralBlossom } from './procAssets'
 
@@ -10,7 +11,7 @@ import { proceduralBlossom } from './procAssets'
    The point-cloud version read as confetti because a flower's whole character is its
    petal silhouette, which loose dots can never describe. One mesh, instanced, does. */
 
-const COUNT = 520
+const COUNT = Math.round(520 * budget)
 const SPAN_Y = 58
 
 /* The field itself, given one unit-sized flower to instance — real mesh or stand-in. */

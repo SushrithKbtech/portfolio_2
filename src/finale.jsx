@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
 import { useSafeTexture, plateTexture } from './procAssets'
+import { budget } from './device'
 
 /* THE GARDEN — the world the projects hang in and the place the scroll settles into.
    A backdrop plate whose top dissolves into the scene, a lawn of loose particles sitting on it,
@@ -44,7 +45,7 @@ function Grass() {
   }), [])
 
   const geo = useMemo(() => {
-    const N = 46000
+    const N = Math.round(46000 * budget)
     const pos = new Float32Array(N * 3), col = new Float32Array(N * 3)
     const siz = new Float32Array(N), rnd = new Float32Array(N)
     // fireflies and glowing blue flowers, per the reference — warm gold sparks over cool green

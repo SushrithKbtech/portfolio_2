@@ -149,3 +149,58 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
   font-size:15px;letter-spacing:.42em;opacity:.55;transition:opacity .6s ease;pointer-events:none;
   animation:breathe 3.2s ease-in-out infinite;white-space:nowrap}
 @keyframes breathe{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
+
+/* =====================================================================
+   SMALL SCREENS
+   The 3D framing is handled in device.js — the camera is pushed back by the aspect ratio so the
+   scene composes the same on a phone. Everything below is the DOM layer: chrome that has to
+   shrink, callouts that have nowhere to go, and 100vh, which on a phone means "taller than what
+   you can actually see" until the URL bar collapses.
+   ===================================================================== */
+
+/* dvh tracks the visible viewport as the browser chrome slides away; vh does not */
+@supports (height: 100dvh) {
+  .gl, .gl canvas, canvas.gl, .contactstage, .oslogin, .pageveil, .whiteout { height: 100dvh !important }
+}
+
+/* the phone-only link list is desktop-hidden by default */
+.cs-list{display:none}
+
+@media (max-width: 1100px) {
+  nav{gap:20px;padding:20px 22px;font-size:11px;letter-spacing:.14em}
+  nav .enter{padding:9px 16px;margin-left:6px}
+  nav .mark{font-size:16px;letter-spacing:.26em}
+}
+
+@media (max-width: 760px) {
+  nav{gap:14px;padding:16px 16px;font-size:10px;letter-spacing:.12em}
+  nav .mark{font-size:14px;letter-spacing:.2em;gap:6px}
+  nav .enter{padding:8px 13px;border-radius:99px}
+  nav a.link{opacity:.8}
+
+  .scrollcue{font-size:11px;letter-spacing:.3em;bottom:22px}
+  .ghosts{background-size:120px 108px;opacity:.35}
+
+  /* the contact stage: no room either side of the handset, so the callouts become a list */
+  .cs-call,.cs-wire{display:none}
+  .cs-kicker{top:11vh;font-size:.72rem;letter-spacing:.36em}
+  .cs-list{display:grid;position:absolute;left:0;right:0;bottom:15vh;z-index:3;
+    grid-template-columns:1fr 1fr;gap:.7rem 1rem;padding:0 6vw;margin:0;list-style:none}
+  .cs-list a{display:block;text-decoration:none;color:#e6ecfb;
+    border:1px solid rgba(150,190,255,.18);border-radius:10px;padding:.65rem .7rem;
+    background:rgba(10,16,32,.5)}
+  .cs-list b{display:block;font-size:.82rem;font-weight:600;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .cs-list i{display:block;font-style:normal;font-size:.6rem;color:#93a2c4;margin-top:.2rem;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-phone{bottom:5vh;font-size:.66rem;letter-spacing:.2em;padding:.6rem 1.1rem}
+}
+
+/* landscape phones: almost no vertical room, so the chrome has to get out of the way */
+@media (max-height: 520px) and (orientation: landscape) {
+  nav{padding:10px 16px}
+  .scrollcue{bottom:10px;font-size:10px}
+  .cs-kicker{top:6vh}
+  .cs-list{bottom:8vh;grid-template-columns:repeat(4,1fr)}
+  .cs-phone{bottom:2vh}
+}

@@ -2,6 +2,7 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
+import { budget } from './device'
 
 /* ============================================================
    THE GARDEN — a point cloud, not vegetation geometry.
@@ -13,8 +14,9 @@ import { scroll } from './scrollState'
    both bookends.
    ============================================================ */
 
-// more points to go with the denser planting — each plant still gets roughly the same budget
-const N = 232000
+// more points to go with the denser planting — each plant still gets roughly the same budget,
+// scaled down on phones and tablets where a quarter of a million points is not a fair ask
+const N = Math.round(232000 * budget)
 
 function rnd(a, b) { return a + Math.random() * (b - a) }
 
@@ -47,7 +49,7 @@ export default function Garden() {
     // 120 -> 230, and the belt pushed wider: at the closer camera the planting had visible gaps
     // you could see straight through, which made it read as scenery rather than as a place.
     const plants = []
-    for (let i = 0; i < 230; i++) {
+    for (let i = 0; i < Math.round(230 * (0.55 + budget * 0.45)); i++) {
       const a = Math.random() * Math.PI * 2
       const rad = rnd(8.5, 30)
       plants.push({
