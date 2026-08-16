@@ -1,0 +1,151 @@
+/* Self-hosted so the wordmark never depends on the network mid-scroll. Futura and Avant Garde
+   aren't licensed for the web — those two options fall back through the stack in hero.jsx, landing
+   on Century Gothic (Windows) or Avenir Next (macOS), both geometric enough to hold the look. */
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:900;font-display:block;
+  src:url('/fonts/montserrat-900.woff2') format('woff2')}
+@font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:block;
+  src:url('/fonts/syne-800.woff2') format('woff2')}
+
+:root{
+  --ink:#04050a;
+  --paper:#eef2ff;
+  --line:#8fa6ff;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+html,body,#root{margin:0;padding:0;height:100%}
+/* overflow-x only — the journey scrolls vertically down the runway */
+body{background:var(--ink);color:var(--paper);font-family:var(--mono);overflow-x:hidden;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+
+/* ---------- ghost watermarks ----------
+   Faint wireframe triangles tiled across the upper quadrant, sitting behind the nav. SVG rather
+   than geometry: it stays crisp at any DPR and costs nothing on the GPU budget. */
+.ghosts{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.5;transition:opacity .8s ease;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='160' viewBox='0 0 180 160'%3E%3Cg fill='none' stroke='%238fa6ff' stroke-width='1' opacity='.28'%3E%3Cpath d='M90 18 L158 140 L22 140 Z'/%3E%3Cpath d='M90 52 L131 124 L49 124 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:180px 160px;
+  /* upper quadrant only, dissolving downward and toward the frame edges */
+  -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.9) 0%,rgba(0,0,0,.35) 26%,transparent 46%),
+    radial-gradient(ellipse at 50% 20%,transparent 18%,#000 62%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.9) 0%,rgba(0,0,0,.35) 26%,transparent 46%),
+    radial-gradient(ellipse at 50% 20%,transparent 18%,#000 62%);
+  mask-composite:intersect}
+
+/* ---------- perimeter falloff ----------
+   The postprocessing Vignette darkens; this one also COOLS, which is what keeps the corners deep
+   blue-charcoal instead of flat black. */
+.falloff{position:fixed;inset:0;z-index:3;pointer-events:none;
+  background:
+    radial-gradient(ellipse 78% 70% at 50% 50%,transparent 34%,rgba(5,8,22,.62) 78%,rgba(2,3,8,.95) 100%),
+    radial-gradient(ellipse 120% 90% at 50% 120%,rgba(28,36,92,.35),transparent 60%)}
+
+.grain{position:fixed;inset:-50%;width:200%;height:200%;z-index:4;pointer-events:none;opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:drift 8s steps(6) infinite}
+@keyframes drift{
+  0%{transform:translate(0,0)} 20%{transform:translate(-3%,2%)} 40%{transform:translate(2%,-3%)}
+  60%{transform:translate(-2%,-2%)} 80%{transform:translate(3%,1%)} 100%{transform:translate(0,0)}}
+
+/* ---------- chrome ---------- */
+/* z-index 30: ABOVE the contact stage (22). The stage is full-frame and opaque, so at the old 6
+   the nav vanished exactly when someone reading the contact details might want it most. */
+nav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:34px;
+  padding:26px 34px;font-size:13px;letter-spacing:.18em}
+nav .mark{font-weight:700;font-size:19px;letter-spacing:.34em;margin-right:auto;
+  display:flex;align-items:center;gap:10px}
+nav .mark svg{display:block}
+nav a.link{opacity:.72;transition:opacity .25s}
+nav a.link:hover{opacity:1}
+nav .enter{margin-left:14px;border:1px solid rgba(180,198,255,.34);border-radius:999px;
+  padding:11px 22px;opacity:.9;transition:border-color .25s,background .25s}
+nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.1)}
+
+/* ---------- corner HUD ----------
+   The reference frames its centrepiece with read-outs rather than copy. Same idea, minus the
+   editable controls: it says the object in the middle is an instrument, not a picture. */
+.hud{position:fixed;z-index:6;font-size:11px;letter-spacing:.16em;opacity:.5;line-height:2;
+  transition:opacity .6s ease;pointer-events:none}
+.hud.left{left:34px;bottom:30px}
+.hud.right{right:34px;bottom:30px;text-align:right}
+.hud b{font-weight:400;opacity:.6;margin-right:14px}
+.hud i{font-style:normal}
+
+/* THE CHAPTER CARD. Anton — the display face this project already loads — set enormous, white,
+   and tracked wide so it reads as a title card rather than a heading. The glow keeps it off the
+   bone behind it without a box. */
+.chapter{position:fixed;left:50%;top:50%;z-index:12;pointer-events:none;
+  font-family:"Anton",Impact,sans-serif;font-weight:400;color:#fff;
+  font-size:clamp(3rem,13vw,12rem);line-height:.9;letter-spacing:.16em;text-transform:uppercase;
+  white-space:nowrap;visibility:hidden;opacity:0;
+  text-shadow:0 0 90px rgba(120,170,255,.55),0 0 28px rgba(255,255,255,.35),0 6px 60px rgba(0,0,0,.6)}
+
+.plinks{display:flex;gap:1.2rem;justify-content:flex-end;margin-top:1rem;
+  font-size:.58rem;letter-spacing:.28em;text-transform:uppercase}
+.plinks a{opacity:.7;border-bottom:1px solid rgba(238,240,246,.3);padding-bottom:.25rem;
+  transition:opacity .25s,border-color .25s}
+.plinks a:hover{opacity:1;border-color:rgba(238,240,246,.9)}
+@media (max-width:760px){.plinks{justify-content:flex-start}}
+
+/* ================= THE CONTACT STAGE — the last thing on the scroll =================
+   A 3D handset on its own canvas, with the callouts left in the DOM and re-anchored every frame
+   from where each icon has actually turned to. */
+.contactstage{position:fixed;inset:0;z-index:22;visibility:hidden;opacity:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 50%,#070a12 0%,#000 78%)}
+.cs-canvas{position:absolute!important;inset:0;width:100%!important;height:100%!important}
+/* neon: the glow does the work, so the letters themselves stay pale rather than saturated —
+   a fully cyan fill on a cyan halo just reads as blur */
+.cs-kicker{position:absolute;top:9vh;left:50%;transform:translateX(-50%);margin:0;z-index:2;
+  font-size:.92rem;letter-spacing:.5em;text-transform:uppercase;color:#dcfaff;
+  text-shadow:0 0 4px #7ff0ff,0 0 12px #35d6ff,0 0 30px rgba(53,214,255,.75),
+    0 0 62px rgba(53,214,255,.45);
+  animation:neon 3.6s ease-in-out infinite}
+@keyframes neon{0%,100%{opacity:.92}50%{opacity:1}}
+/* the number doubles as a copy button */
+.cs-phone{position:absolute;bottom:7vh;left:50%;transform:translateX(-50%);margin:0;z-index:3;
+  font-size:.78rem;letter-spacing:.3em;color:#9fb0d6;cursor:pointer;
+  border:1px solid rgba(150,190,255,.22);border-radius:99px;padding:.7rem 1.5rem;
+  background:rgba(10,16,32,.5);backdrop-filter:blur(8px);transition:color .25s,border-color .25s}
+.cs-phone:hover{color:#fff;border-color:rgba(150,190,255,.6)}
+.cs-phone[data-copied="1"]{color:#7ee8a2;border-color:rgba(126,232,162,.6)}
+
+/* callouts — positioned by transform from the projected icon position, so they follow the phone */
+.cs-call{position:absolute;top:0;left:0;z-index:3;text-decoration:none;color:#f2f6ff;
+  opacity:0;transition:opacity .45s ease;white-space:nowrap;padding:.2rem 0}
+.cs-call.left{text-align:right}
+.cs-call b{display:block;font-size:1.5rem;letter-spacing:.02em;font-weight:600;line-height:1.15;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cs-call i{display:block;font-style:normal;font-size:.95rem;letter-spacing:.05em;color:#a7b4d2;
+  margin-top:.35rem;transition:color .25s;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cs-call:hover i{color:#ffc83d}
+.cs-call:hover b{color:#fff}
+
+/* the wires: gold, elbowed, with a dot on the icon they belong to */
+.cs-wire{position:fixed;inset:0;width:100%;height:100%;z-index:2;opacity:0;pointer-events:none;
+  transition:opacity .45s ease;overflow:visible}
+.cs-wire polyline{fill:none;stroke:#ffc83d;stroke-width:1.6;stroke-linejoin:round;
+  stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(255,200,61,.5))}
+.cs-wire circle{fill:#ffc83d;filter:drop-shadow(0 0 7px rgba(255,200,61,.85))}
+
+@media (max-width:900px){
+  .cs-call,.cs-wire{display:none}
+}
+
+/* the between-pages veil — see pageFade.js */
+.pageveil{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:1;
+  background:radial-gradient(ellipse 80% 70% at 50% 45%,#070a16 0%,#04050a 70%);
+  transition:opacity .6s cubic-bezier(.4,0,.2,1)}
+.pageveil.clear{opacity:0}
+
+/* Over EVERYTHING — canvas, nav, tickers, the lot. It exists to hide the swap from the glass SK
+   to the column, so anything it doesn't cover defeats the point. */
+.whiteout{position:fixed;inset:0;z-index:40;pointer-events:none;visibility:hidden;opacity:0;
+  background:radial-gradient(ellipse 70% 70% at 50% 50%,#ffffff 0%,#eaf1ff 55%,#cfe0ff 100%)}
+
+.scrollcue{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:6;
+  font-size:15px;letter-spacing:.42em;opacity:.55;transition:opacity .6s ease;pointer-events:none;
+  animation:breathe 3.2s ease-in-out infinite;white-space:nowrap}
+@keyframes breathe{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
