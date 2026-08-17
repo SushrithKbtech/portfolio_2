@@ -1,6 +1,7 @@
 import { useRef, useMemo, useEffect, useState, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
+import { EffectComposer, Bloom, Noise } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import Lenis from 'lenis'
 import { SYSTEMS } from './systems'
@@ -266,6 +267,17 @@ function Scene({ onFocus }) {
       <Blossoms />
       <Suspense fallback={null}><Finale /></Suspense>
       {SYSTEMS.map((s,i) => <Card key={s.id} sys={s} i={i} onFocus={onFocus} />)}
+
+      {/* TWO PASSES, NOT SIX. The old stack had bloom, chromatic aberration, scanline, noise and
+          vignette and cost the frame rate its head. This is the cheap 80%: bloom with a HIGH
+          threshold so only genuine highlights — the LED emitters, the swarm, the wet edge of the
+          glass — flare, and a whisper of grain to stop the gradients banding. mipmapBlur does the
+          blur in mip levels rather than a wide kernel, which is what keeps it affordable. */}
+      <EffectComposer disableNormalPass multisampling={0}>
+        <Bloom intensity={0.62} luminanceThreshold={0.85} luminanceSmoothing={0.3}
+          mipmapBlur radius={0.4} />
+        <Noise premultiply opacity={0.05} />
+      </EffectComposer>
 
     </>
   )

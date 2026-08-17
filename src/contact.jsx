@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, RoundedBox } from '@react-three/drei'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { scroll } from './scrollState'
 import { fitZ, dpr as DPR } from './device'
@@ -380,6 +381,12 @@ export default function ContactStage() {
         </Environment>
         <Dust />
         <Phone anchors={anchors} />
+        {/* the handset earns a highlight pass: its edge, the app icons and the dust are all
+            small bright things on black, which is exactly what bloom is for */}
+        <EffectComposer disableNormalPass multisampling={0}>
+          <Bloom intensity={0.5} luminanceThreshold={0.8} luminanceSmoothing={0.3}
+            mipmapBlur radius={0.35} />
+        </EffectComposer>
       </Canvas>
 
       {/* On a phone there is no room either side of the handset for callouts, so the same four
