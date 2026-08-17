@@ -263,3 +263,23 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
 @media (prefers-reduced-motion:reduce){
   .intro{display:none}
 }
+
+/* THE SPLASH — colour thrown out of the centre as the rings let go.
+   Two waves at different rates and hues: the first is the hit, the second trails it and carries
+   the warmer end of the palette, so the bloom has an inside and an outside rather than being one
+   flat disc growing. Both start at zero scale and are invisible until the dissolve begins. */
+.intro-splash{position:absolute;left:50%;top:50%;width:52vmin;height:52vmin;border-radius:50%;
+  transform:translate(-50%,-50%) scale(.05);opacity:0;pointer-events:none;filter:blur(14px);
+  background:
+    radial-gradient(circle at 50% 50%,rgba(255,255,255,.95) 0%,rgba(120,235,255,.85) 18%,
+      rgba(96,120,255,.7) 38%,rgba(178,90,255,.55) 58%,rgba(255,90,190,.35) 76%,transparent 88%)}
+.intro-splash.two{width:38vmin;height:38vmin;filter:blur(22px);
+  background:
+    radial-gradient(circle at 50% 50%,rgba(255,240,200,.9) 0%,rgba(255,170,90,.7) 30%,
+      rgba(255,90,140,.5) 58%,rgba(150,80,255,.35) 80%,transparent 92%)}
+.intro[data-phase="dissolve"] .intro-splash{animation:splash 1s cubic-bezier(.22,.7,.3,1) forwards}
+.intro[data-phase="dissolve"] .intro-splash.two{animation:splash 1s cubic-bezier(.3,.6,.35,1) .08s forwards}
+@keyframes splash{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.05)}
+  18%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(7.5)}}

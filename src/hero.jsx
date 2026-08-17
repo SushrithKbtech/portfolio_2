@@ -262,14 +262,23 @@ export function HeroRoom() {
         }
         ticker *= (0.35 + 0.65 * bezel) * uTicker;        // the bezel eats the letters at panel edges
 
+        /* THE DOT MATRIX. Everything the wall emits — the programmes, the tickers, the spill —
+           is pushed through a grid of round emitters with dark gaps between them, the way a real
+           LED module works. lp is the sub-cell coordinate, dot the round emitter, and the faint
+           gap term keeps the lattice visible even where the panel is bright.
+           (No backticks in here: this whole shader is a JS template literal.) */
+        vec2 lp = fract(f * 26.0);
+        float dot = smoothstep(0.52, 0.24, length(lp - 0.5));
+        float gap = 0.86 + 0.14 * dot;
+
         vec3 base = vec3(0.020, 0.023, 0.040);
         vec3 wire = vec3(0.62, 0.70, 1.00);
         vec3 glow = vec3(0.72, 0.80, 1.00);   // what the letters are lit in
 
-        vec3 col = base * face;
+        vec3 col = base * face * gap;
         // the spill takes the current programme's colour too, so the whole room turns together
-        col += tint * (content * 0.85 + spill * 0.40 * (0.5 + 0.5 * n));
-        col += glow * ticker * (0.55 + spill * 1.5);
+        col += tint * (content * 0.95 + spill * 0.42 * (0.5 + 0.5 * n)) * dot;
+        col += glow * ticker * (0.55 + spill * 1.5) * dot;
         col += wire * (line * 0.34 + plus * 0.7 + tri) * (0.45 + spill * 0.9);
         col *= depth;
 
@@ -296,8 +305,11 @@ export function HeroRoom() {
        periphery — a band of constant depth — instead of a line of type crossing the frame. A
        segment of cylinder standing on its end puts uv.x across the wall and uv.y up it, so the
        name runs horizontally behind the object and the verticals still bow away at the edges. */
-    <mesh ref={ref} position={[0, 0, 0]} material={mat} renderOrder={-6}>
-      <cylinderGeometry args={[26, 26, 34, 96, 1, true, Math.PI - 1.2, 2.4]} />
+    <mesh ref={ref} position={[0, 0, -3]} material={mat} renderOrder={-6}>
+      {/* radius 26 -> 17 and the arc widened 2.4 -> 3.05 rad: the wall now wraps far enough round
+          that the panels at the edges of frame are turning away from you, which is where all the
+          perspective in this shot comes from. More segments so the curve stays smooth up close. */}
+      <cylinderGeometry args={[17, 17, 30, 140, 1, true, Math.PI - 1.52, 3.05]} />
     </mesh>
   )
 }

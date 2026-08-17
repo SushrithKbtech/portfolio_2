@@ -75,6 +75,10 @@ export default function Intro({ onDone }) {
   return (
     <div className="intro" data-phase={phase}>
       <div className="intro-stars" />
+      {/* the splash: a bloom of colour thrown out of the centre as the rings let go, so the hand
+          over to the hero is something arriving rather than something merely ending */}
+      <div className="intro-splash" />
+      <div className="intro-splash two" />
       <div className="intro-stage">
         <svg viewBox="0 0 400 400" className="intro-svg" aria-hidden="true">
           <defs>
