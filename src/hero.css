@@ -283,3 +283,20 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
   0%{opacity:0;transform:translate(-50%,-50%) scale(.05)}
   18%{opacity:1}
   100%{opacity:0;transform:translate(-50%,-50%) scale(7.5)}}
+
+/* ================= VIBRANCE =================
+   With the post-processing stack gone the render is honest but flat. This is the cheapest
+   possible grade: a CSS filter on the canvas is a compositor operation on a texture the GPU has
+   already produced — no extra passes, no extra draw calls, nothing per-frame in JS. It buys back
+   the saturation and contrast the bloom used to imply, and it costs nothing measurable. */
+canvas.gl, .gl canvas, .cs-canvas canvas{
+  filter:saturate(1.42) contrast(1.09) brightness(1.06)}
+
+/* the perimeter grade was tuned against a bloomed image; ease it off so the corners aren't muddy */
+.falloff{background:
+  radial-gradient(ellipse 82% 74% at 50% 50%,transparent 40%,rgba(5,8,22,.5) 80%,rgba(2,3,8,.88) 100%),
+  radial-gradient(ellipse 120% 90% at 50% 120%,rgba(40,52,120,.34),transparent 60%)}
+
+/* EVERY STATE CHANGE EASES. Nothing on the page is allowed to snap between states any more. */
+.ghosts,.hud,.scrollcue,.cap{transition:opacity .9s cubic-bezier(.4,0,.2,1)}
+.chapter{transition:opacity .5s ease}

@@ -157,14 +157,16 @@ export function HeroRoom() {
 
       // Seven programmes, seven colours — the blues and the violet, plus a warm amber, a red and
       // a green so the room isn't only ever one temperature.
+      /* Saturated and lifted. With the bloom pass gone there is nothing downstream adding
+         brilliance, so the emitters have to carry it themselves. */
       vec3 palette(int m){
-        if (m == 0) return vec3(0.88, 0.92, 1.00);   // cold white
-        if (m == 1) return vec3(0.20, 0.26, 1.00);   // electric blue
-        if (m == 2) return vec3(0.58, 0.26, 1.00);   // violet
-        if (m == 3) return vec3(1.00, 0.72, 0.12);   // amber
-        if (m == 4) return vec3(1.00, 0.20, 0.22);   // red
-        if (m == 5) return vec3(0.16, 0.95, 0.45);   // green
-        return vec3(0.12, 0.60, 1.00);               // cyan
+        if (m == 0) return vec3(0.94, 0.97, 1.00);   // cold white
+        if (m == 1) return vec3(0.24, 0.34, 1.00);   // electric blue
+        if (m == 2) return vec3(0.70, 0.24, 1.00);   // violet
+        if (m == 3) return vec3(1.00, 0.74, 0.10);   // amber
+        if (m == 4) return vec3(1.00, 0.18, 0.28);   // red
+        if (m == 5) return vec3(0.12, 1.00, 0.48);   // green
+        return vec3(0.05, 0.68, 1.00);               // cyan
       }
 
       // signed distance to an upward triangle, for the ghost glyphs tiled through the wall
@@ -196,7 +198,10 @@ export function HeroRoom() {
         float pr = uT / 7.0;
         int m0 = int(mod(floor(pr), 7.0));
         int m1 = int(mod(floor(pr) + 1.0, 7.0));
-        float k = smoothstep(0.84, 1.0, fract(pr));   // holds, then cuts fast, like a real wall
+        // A LONG CROSSFADE, not a cut. Every hard switch in this scene has been softened: the
+        // wall now spends the back half of each cycle dissolving into the next programme and its
+        // colour, so nothing on screen ever changes state in a single frame.
+        float k = smoothstep(0.42, 1.0, fract(pr));
         float pat = mix(programme(id, m0, uT), programme(id, m1, uT), k);
         vec3 tint = mix(palette(m0), palette(m1), k);
 
@@ -249,15 +254,16 @@ export function HeroRoom() {
             ticker += texture2D(uText, vec2(u, band)).r * 1.0;
           }
           // WHAT I DO: smaller than the name but no longer a whisper, running the other way
-          float band2 = (vUv.y - 0.735) / 0.125 + 0.5;
+          // taller bands and fewer repeats around the wall: same tickers, noticeably bigger type
+          float band2 = (vUv.y - 0.750) / 0.185 + 0.5;
           if (band2 > 0.0 && band2 < 1.0) {
-            float u2 = fract(x * 1.35 - uT * 0.020);
-            ticker += texture2D(uRoles, vec2(u2, band2)).r * 0.62;
+            float u2 = fract(x * 0.92 - uT * 0.020);
+            ticker += texture2D(uRoles, vec2(u2, band2)).r * 0.8;
           }
-          float band3 = (vUv.y - 0.275) / 0.11 + 0.5;
+          float band3 = (vUv.y - 0.255) / 0.165 + 0.5;
           if (band3 > 0.0 && band3 < 1.0) {
-            float u3 = fract(x * 1.55 + uT * 0.014);
-            ticker += texture2D(uRoles, vec2(u3, band3)).r * 0.5;
+            float u3 = fract(x * 1.05 + uT * 0.014);
+            ticker += texture2D(uRoles, vec2(u3, band3)).r * 0.68;
           }
         }
         ticker *= (0.35 + 0.65 * bezel) * uTicker;        // the bezel eats the letters at panel edges
@@ -277,7 +283,7 @@ export function HeroRoom() {
 
         vec3 col = base * face * gap;
         // the spill takes the current programme's colour too, so the whole room turns together
-        col += tint * (content * 0.95 + spill * 0.42 * (0.5 + 0.5 * n)) * dot;
+        col += tint * (content * 1.35 + spill * 0.55 * (0.5 + 0.5 * n)) * dot;
         col += glow * ticker * (0.55 + spill * 1.5) * dot;
         col += wire * (line * 0.34 + plus * 0.7 + tri) * (0.45 + spill * 0.9);
         col *= depth;
