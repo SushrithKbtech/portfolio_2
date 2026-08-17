@@ -14,6 +14,7 @@ import { HeroRoom, HeroChart, SKObject } from './hero.jsx'
 import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
 import { fitZ, dpr as DPR } from './device'
+import Intro from './intro.jsx'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -290,6 +291,32 @@ function Whiteout() {
 }
 
 
+/* The chapter card, plain white type over the column. Same rAF-not-setState treatment as the
+   whiteout: at 60fps a setState per frame would re-render the page for one opacity value. */
+function ChapterTitle() {
+  const ref = useRef()
+  useEffect(() => {
+    let raf
+    const tick = () => {
+      const el = ref.current
+      if (el) {
+        const p = scroll.p
+        const v = Math.min(
+          THREE.MathUtils.smoothstep(p, 0.098, 0.120),
+          1 - THREE.MathUtils.smoothstep(p, 0.150, 0.170),
+        )
+        el.style.opacity = v.toFixed(3)
+        el.style.visibility = v > 0.01 ? 'visible' : 'hidden'
+        el.style.transform = `translate(-50%,-50%) scale(${(1.07 - v * 0.07).toFixed(4)})`
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return <div className="chapter" ref={ref}>Projects</div>
+}
+
 const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight
 
 const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/#%'
@@ -309,6 +336,7 @@ function useScramble(text) {
 
 export default function Helix() {
   const [focus, setFocus] = useState(0)
+  const [intro, setIntro] = useState(true)   // the rings spin up before anything else
   const [gone, setGone] = useState(false)      // act zero has handed over
   const [inWork, setInWork] = useState(false)  // the project gallery is running
   const title = useScramble(SYSTEMS[focus].n)
@@ -356,7 +384,11 @@ export default function Helix() {
         <Suspense fallback={null}><Rig /><Scene onFocus={setFocus} /></Suspense>
       </Canvas>
 
+      {/* the rings spin up over everything, then tilt away to reveal the hero already running */}
+      {intro && <Intro onDone={() => setIntro(false)} />}
+
       <Whiteout />
+      <ChapterTitle />
       <ContactStage />
 
       {/* act zero's chrome — the ghost triangles and the cool perimeter go with the room */}

@@ -205,3 +205,61 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
   .cs-phone{bottom:2vh}
 }
 
+
+/* ================= THE INTRO =================
+   Rings spinning up on black, then the whole plate tilts back like a ring system and expands
+   past the camera. Everything is transform and opacity, so it stays on the compositor. */
+.intro{position:fixed;inset:0;z-index:55;background:#04050a;overflow:hidden;
+  display:grid;place-items:center;perspective:1200px}
+.intro[data-phase="dissolve"]{animation:introfade 1s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes introfade{0%{opacity:1}60%{opacity:.55}100%{opacity:0}}
+
+/* the starfield it expands into */
+.intro-stars{position:absolute;inset:0;opacity:.55;
+  background-image:
+    radial-gradient(1.6px 1.6px at 18% 24%,rgba(200,225,255,.9),transparent),
+    radial-gradient(1.4px 1.4px at 72% 16%,rgba(190,215,255,.8),transparent),
+    radial-gradient(1.8px 1.8px at 38% 72%,rgba(210,230,255,.85),transparent),
+    radial-gradient(1.2px 1.2px at 84% 62%,rgba(180,205,255,.7),transparent),
+    radial-gradient(1.5px 1.5px at 58% 42%,rgba(200,220,255,.75),transparent),
+    radial-gradient(1.1px 1.1px at 10% 82%,rgba(180,200,255,.6),transparent),
+    radial-gradient(1.3px 1.3px at 92% 34%,rgba(200,220,255,.7),transparent),
+    radial-gradient(1.2px 1.2px at 26% 52%,rgba(190,210,255,.6),transparent)}
+.intro[data-phase="dissolve"] .intro-stars{animation:starrush 1s cubic-bezier(.5,0,.9,1) forwards}
+@keyframes starrush{to{transform:scale(1.6);opacity:0}}
+
+/* THE PLANETARY TILT — flat and dead-on, then laid back on X and thrown past the camera */
+.intro-stage{transform-style:preserve-3d;animation:introin .7s cubic-bezier(.16,.9,.24,1) both}
+@keyframes introin{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
+.intro[data-phase="dissolve"] .intro-stage{
+  animation:tiltaway 1s cubic-bezier(.5,0,.85,1) forwards}
+@keyframes tiltaway{
+  30%{transform:rotateX(58deg) scale(1.06)}
+  100%{transform:rotateX(74deg) scale(3.6) translateZ(340px);opacity:0}}
+
+.intro-svg{width:min(70vmin,520px);height:min(70vmin,520px);display:block;overflow:visible}
+
+/* tracks */
+.intro-svg .ring{fill:none;stroke:rgba(150,190,255,.34);stroke-width:1}
+.intro-svg .ring.thin{stroke:rgba(150,190,255,.20)}
+.intro-svg .ring.dashed{stroke:rgba(170,205,255,.5);stroke-dasharray:3 12}
+.intro-svg .arc{fill:none;stroke:rgba(120,225,255,.9);stroke-width:2;stroke-linecap:round}
+.intro-svg .node{fill:#8fe6ff;filter:drop-shadow(0 0 6px rgba(120,225,255,.9))}
+.intro-svg .node.dim{fill:rgba(160,200,255,.6);filter:none}
+.intro-svg .crosshair line{stroke:rgba(140,180,255,.12);stroke-width:1}
+.intro-svg .ringtext{fill:rgba(190,215,255,.75);font-family:var(--mono);
+  font-size:11px;letter-spacing:.34em}
+.intro-svg .mark{fill:#eaf3ff;font-family:var(--mono);font-weight:700;font-size:30px;
+  letter-spacing:.34em;filter:drop-shadow(0 0 14px rgba(120,190,255,.75))}
+
+/* opposing rotations at four different rates — that difference is what reads as a mechanism */
+.intro-svg g[class^="spin-"]{transform-origin:200px 200px}
+.spin-a{animation:spin 26s linear infinite}
+.spin-b{animation:spin 16s linear infinite reverse}
+.spin-c{animation:spin 7s linear infinite}
+.spin-d{animation:spin 4.5s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (prefers-reduced-motion:reduce){
+  .intro{display:none}
+}

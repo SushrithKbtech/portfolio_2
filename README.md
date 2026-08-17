@@ -32,6 +32,7 @@ module only reads it. Nothing talks to anything else.
 | `garden.jsx` · `finale.jsx` · `blossoms.jsx` | the planting, the backdrop plate, the lawn |
 | `contact.jsx` | the closing act: a 3D handset with the four ways to reach me |
 | `about.jsx` · `osLogin.jsx` · `neural.jsx` | the about page, its login, its constellation |
+| `intro.jsx` | the opening rings, and the tilt that hands over to the hero |
 | `procAssets.js` · `assetGuard.jsx` | procedural stand-ins for any asset that isn't on disk |
 | `systems.js` | the projects — edit this and the helix re-flows |
 
@@ -55,6 +56,7 @@ optional and falls back to something generated at runtime.
 - `?font=futura|avantgarde|montserrat|syne` — the wordmark typeface
 - `?s=0.42` — pin the scroll to a fixed position, for screenshots
 - `?boot=slow` — run the about-page login at a third speed
+- `?intro=hold` — park the opening rings on their spin instead of dissolving
 
 ---
 
