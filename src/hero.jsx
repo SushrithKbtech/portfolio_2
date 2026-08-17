@@ -212,7 +212,10 @@ export function HeroRoom() {
         // --- what's playing on the live ones: slow bands and a rolling refresh line
         float bands = 0.5 + 0.5 * sin(f.y * 16.0 + uT * (0.4 + n2 * 0.6) + n * 40.0);
         float roll  = smoothstep(0.08, 0.0, abs(fract(f.y - uT * 0.09 * (0.4 + n2)) - 0.5));
-        float content = pat * (0.30 + bands * 0.45 + roll * 0.5);
+        // A DARK ROOM WITH A FEW LIT PANELS, not a video wall. The reference is nearly black:
+        // the grid is the brightest thing on it and the colour is a wash across a handful of
+        // panels, so the object in front stays the subject.
+        float content = pat * (0.10 + bands * 0.16 + roll * 0.22);
 
         // --- THE SPILL. Every bit of blue in the reference comes off the object and lands on the
         // wall behind it: brightest square in the middle of the frame, falling away fast.
@@ -277,15 +280,15 @@ export function HeroRoom() {
         float dot = smoothstep(0.52, 0.24, length(lp - 0.5));
         float gap = 0.86 + 0.14 * dot;
 
-        vec3 base = vec3(0.020, 0.023, 0.040);
+        vec3 base = vec3(0.012, 0.015, 0.028);
         vec3 wire = vec3(0.62, 0.70, 1.00);
         vec3 glow = vec3(0.72, 0.80, 1.00);   // what the letters are lit in
 
         vec3 col = base * face * gap;
         // the spill takes the current programme's colour too, so the whole room turns together
-        col += tint * (content * 1.35 + spill * 0.55 * (0.5 + 0.5 * n)) * dot;
-        col += glow * ticker * (0.55 + spill * 1.5) * dot;
-        col += wire * (line * 0.34 + plus * 0.7 + tri) * (0.45 + spill * 0.9);
+        col += tint * (content * 1.05 + spill * 0.16 * (0.5 + 0.5 * n)) * dot;
+        col += glow * ticker * (0.42 + spill * 0.7) * dot;
+        col += wire * (line * 0.55 + plus * 0.8 + tri) * (0.5 + spill * 0.5);
         col *= depth;
 
         // LED sub-pixel scanlines, fine enough to read as panel structure rather than CRT
@@ -480,14 +483,16 @@ function Glass({ geometry }) {
           The crawling distortion is the water finding its way down. */}
       {/* samples 10 -> 5 and buffer 512 -> 256: this material re-renders the scene into an
           off-screen target every single frame, and at these sizes the difference is invisible
-          through frosted glass but halves the cost of the hero. */}
+          through frosted glass but halves the cost of the hero.
+          Attenuation is stretched right out (16) so the glass barely tints what passes through
+          it — the monogram reads as clear ice picking up the room, not as a blue object. */}
       <MeshTransmissionMaterial ref={mat} transparent
-        samples={5} resolution={256} thickness={0.85} ior={1.29} chromaticAberration={0.05}
-        anisotropy={0.35} distortion={0.5} distortionScale={0.7} temporalDistortion={0.3}
-        roughness={0.3} clearcoat={1} clearcoatRoughness={0.12}
-        attenuationDistance={5.5} attenuationColor="#6f9dff"
-        iridescence={0.5} iridescenceIOR={1.3} iridescenceThicknessRange={[100, 700]}
-        transmission={1} color="#f2f8ff" />
+        samples={5} resolution={256} thickness={0.7} ior={1.28} chromaticAberration={0.045}
+        anisotropy={0.3} distortion={0.42} distortionScale={0.65} temporalDistortion={0.26}
+        roughness={0.2} clearcoat={1} clearcoatRoughness={0.1}
+        attenuationDistance={16} attenuationColor="#bcd8ff"
+        iridescence={0.28} iridescenceIOR={1.28} iridescenceThicknessRange={[100, 620]}
+        transmission={1} color="#ffffff" />
       {/* No `background` prop on purpose: it FILLS the transmission buffer with a flat colour
           instead of the real scene, which is what was making the object read as a solid blue
           lump. Left off, the wall and its tickers refract through the ice. */}
@@ -528,98 +533,15 @@ export function SKObject() {
   // into it — lit from the front alone it goes to a dark blue lump, which is the difference
   // between the reference's glowing monolith and a paperweight.
   useFrame(() => {
-    if (light.current) light.current.intensity = 26 * (1 - scroll.heroOut)
+    if (light.current) light.current.intensity = 9 * (1 - scroll.heroOut)
   })
   return (
     <group position={[0, 0, 1.6]}>
-      <pointLight ref={light} position={[0, 0.4, -2.4]} intensity={26} distance={14} color="#3a5bff" />
+      {/* the backlight is what was painting it blue — pulled right down and cooled to white */}
+      <pointLight ref={light} position={[0, 0.4, -2.4]} intensity={9} distance={14} color="#cfe2ff" />
       <Optional name="/models/sk.glb" fallback={<BuiltSK />}>
         <GLBObject />
       </Optional>
     </group>
-  )
-}
-
-/* THE CHAPTER TITLE — real extruded letters standing IN FRONT of the column, in the same glass
-   as the monogram. A textured plane was the wrong tool twice over: flat however you shade it, and
-   sitting at the wall's depth it got sliced in half by the spine. These are eight solids built
-   the way SK is — stroke centrelines offset into outlines and extruded — so they catch the light,
-   throw a bevel, and refract the bone moving behind them. */
-function ellipseArc(cx, cy, rx, ry, from, to, steps = 40) {
-  const out = []
-  for (let i = 0; i <= steps; i++) {
-    const th = THREE.MathUtils.lerp(from, to, i / steps) * DEG
-    out.push(V(cx + Math.cos(th) * rx, cy + Math.sin(th) * ry))
-  }
-  return out
-}
-
-// Every glyph is a list of centrelines in a box 2.0 tall, drawn on the same geometric skeleton as
-// the monogram: single-storey, compass-and-ruler, no serifs and no optical corrections.
-const GLYPHS = {
-  P: [[V(-0.40, -1), V(-0.40, 1)], [V(-0.40, 1), ...ellipseArc(-0.40, 0.48, 0.52, 0.52, 90, -90), V(-0.40, -0.04)]],
-  R: [[V(-0.40, -1), V(-0.40, 1)], [V(-0.40, 1), ...ellipseArc(-0.40, 0.48, 0.52, 0.52, 90, -90), V(-0.40, -0.04)],
-      [V(-0.34, -0.04), V(0.40, -1)]],
-  O: [ellipseArc(0, 0, 0.50, 0.98, 0, 360)],
-  J: [[V(0.34, 1), V(0.34, -0.52)], ellipseArc(0, -0.52, 0.34, 0.44, 0, -180)],
-  E: [[V(-0.40, -1), V(-0.40, 1)], [V(-0.40, 1), V(0.42, 1)], [V(-0.40, 0), V(0.30, 0)], [V(-0.40, -1), V(0.42, -1)]],
-  C: [ellipseArc(0, 0, 0.50, 0.98, 55, 305)],
-  T: [[V(-0.52, 1), V(0.52, 1)], [V(0, 1), V(0, -1)]],
-  S: [[...ellipseArc(0, 0.47, 0.47, 0.47, 28, 250), ...ellipseArc(0, -0.47, 0.47, 0.47, 70, -152)]],
-}
-
-function wordGeometry(word, { stroke = 0.345, advance = 1.46, depth = 0.5 } = {}) {
-  const extrude = { depth, bevelEnabled: true, bevelThickness: 0.028, bevelSize: 0.028, bevelSegments: 3, curveSegments: 5 }
-  const geos = []
-  word.split('').forEach((ch, i) => {
-    const strokes = GLYPHS[ch]
-    if (!strokes) return
-    const x = (i - (word.length - 1) / 2) * advance
-    strokes.forEach(pts => {
-      const g = new THREE.ExtrudeGeometry(ribbonShape(pts, stroke), extrude)
-      g.translate(x, 0, 0)
-      geos.push(g)
-    })
-  })
-  const g = mergeGeometries(geos, false)
-  g.center()
-  g.computeVertexNormals()
-  return g
-}
-
-export function ChapterWord() {
-  const ref = useRef()
-  const geometry = useMemo(() => wordGeometry('PROJECTS'), [])
-
-  useFrame(({ clock }) => {
-    const m = ref.current; if (!m) return
-    const ch = scroll.chapter
-    m.visible = ch > 0.01
-    if (!m.visible) return
-    m.material.opacity = ch
-    // arrives out of depth and settles, with a slow bank so you read it as an object
-    m.position.z = 3.4 - (1 - ch) * 3.0
-    // fatter strokes made the word wider than the frame — brought down so it sits with margins
-    m.scale.setScalar(0.72 + ch * 0.1)
-    m.rotation.y = Math.sin(clock.elapsedTime * 0.28) * 0.10 + (1 - ch) * 0.25
-    m.rotation.x = Math.sin(clock.elapsedTime * 0.21) * 0.05
-  })
-
-  return (
-    <mesh ref={ref} position={[0, 0, 3.4]} scale={1} renderOrder={3}>
-      <primitive object={geometry} attach="geometry" />
-      {/* the monogram's material, not three's built-in transmission — that one has no scene buffer
-          to sample here and renders the letters as black slabs */}
-      {/* Whiter than the monogram on purpose: at full transmission the letters took their colour
-          from whatever was behind them and vanished into the planting. Dropping transmission to
-          0.68 and lifting roughness leaves a frosted white body that holds its own shape, with
-          just enough left to still refract the column moving behind it. */}
-      <MeshTransmissionMaterial
-        samples={4} resolution={256} transmission={0.68} thickness={0.5} ior={1.36}
-        chromaticAberration={0.1} anisotropy={0.2} distortion={0.1} distortionScale={0.3}
-        temporalDistortion={0.04} roughness={0.16} clearcoat={1} clearcoatRoughness={0.12}
-        attenuationDistance={14} attenuationColor="#eef4ff"
-        color="#ffffff" envMapIntensity={2.4} transparent opacity={0} />
-    </mesh>
   )
 }

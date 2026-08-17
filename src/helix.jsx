@@ -15,7 +15,6 @@ import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
 import { fitZ, dpr as DPR } from './device'
 import Intro from './intro.jsx'
-import LiquidCursor from './cursor.jsx'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -192,13 +191,6 @@ function Rig() {
     scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.078, 0.170)
     // the column's whole entrance sits under the flash, so you never watch it arrive
     scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.074, 0.094)
-    // THE TITLE BEAT: the wall comes back up, PROJECTS is set across it, and the glass turns
-    // edge-on in front of the type. It clears just before card 01 arrives at 0.186.
-    scroll.chapter = Math.min(
-      THREE.MathUtils.smoothstep(p, 0.115, 0.136),
-      1 - THREE.MathUtils.smoothstep(p, 0.158, 0.176),
-    )
-    scroll.intro   = THREE.MathUtils.smoothstep(p, 0.0, 0.22)
     scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.97)
     /* THE CLOSE. It starts the moment the last project has gone past rather than in the final few
        percent: the garden dissolves to black from 0.76, the phone is up by 0.90, and the apps land
@@ -291,8 +283,8 @@ function Whiteout() {
 }
 
 
-/* The chapter card, plain white type over the column. Same rAF-not-setState treatment as the
-   whiteout: at 60fps a setState per frame would re-render the page for one opacity value. */
+/* The chapter card. Its own rAF rather than React state: at 60fps a setState per frame would
+   re-render the whole page for one opacity value. */
 function ChapterTitle() {
   const ref = useRef()
   useEffect(() => {
@@ -307,7 +299,7 @@ function ChapterTitle() {
         )
         el.style.opacity = v.toFixed(3)
         el.style.visibility = v > 0.01 ? 'visible' : 'hidden'
-        el.style.transform = `translate(-50%,-50%) scale(${(1.07 - v * 0.07).toFixed(4)})`
+        el.style.transform = `translate(-50%,-50%) scale(${(1.05 - v * 0.05).toFixed(4)})`
       }
       raf = requestAnimationFrame(tick)
     }
@@ -387,7 +379,6 @@ export default function Helix() {
       {/* the rings spin up over everything, then tilt away to reveal the hero already running */}
       {intro && <Intro onDone={() => setIntro(false)} />}
 
-      <LiquidCursor />
       <Whiteout />
       <ChapterTitle />
       <ContactStage />

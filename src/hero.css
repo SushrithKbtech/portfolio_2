@@ -73,14 +73,13 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
 .hud b{font-weight:400;opacity:.6;margin-right:14px}
 .hud i{font-style:normal}
 
-/* THE CHAPTER CARD. Anton — the display face this project already loads — set enormous, white,
-   and tracked wide so it reads as a title card rather than a heading. The glow keeps it off the
-   bone behind it without a box. */
+/* THE CHAPTER CARD — Anton, white, tracked wide. Smaller than it was: at 13vw it was competing
+   with the column behind it instead of labelling it. */
 .chapter{position:fixed;left:50%;top:50%;z-index:12;pointer-events:none;
   font-family:"Anton",Impact,sans-serif;font-weight:400;color:#fff;
-  font-size:clamp(3rem,13vw,12rem);line-height:.9;letter-spacing:.16em;text-transform:uppercase;
-  white-space:nowrap;visibility:hidden;opacity:0;
-  text-shadow:0 0 90px rgba(120,170,255,.55),0 0 28px rgba(255,255,255,.35),0 6px 60px rgba(0,0,0,.6)}
+  font-size:clamp(1.9rem,7.4vw,6.4rem);line-height:.9;letter-spacing:.42em;text-transform:uppercase;
+  white-space:nowrap;visibility:hidden;opacity:0;transition:opacity .5s ease;
+  text-shadow:0 0 70px rgba(120,170,255,.5),0 0 24px rgba(255,255,255,.3),0 6px 50px rgba(0,0,0,.6)}
 
 .plinks{display:flex;gap:1.2rem;justify-content:flex-end;margin-top:1rem;
   font-size:.58rem;letter-spacing:.28em;text-transform:uppercase}
@@ -272,7 +271,7 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
    already produced — no extra passes, no extra draw calls, nothing per-frame in JS. It buys back
    the saturation and contrast the bloom used to imply, and it costs nothing measurable. */
 canvas.gl, .gl canvas, .cs-canvas canvas{
-  filter:saturate(1.42) contrast(1.09) brightness(1.06)}
+  filter:saturate(1.22) contrast(1.06) brightness(1.03)}
 
 /* the perimeter grade was tuned against a bloomed image; ease it off so the corners aren't muddy */
 .falloff{background:
@@ -281,67 +280,5 @@ canvas.gl, .gl canvas, .cs-canvas canvas{
 
 /* EVERY STATE CHANGE EASES. Nothing on the page is allowed to snap between states any more. */
 .ghosts,.hud,.scrollcue,.cap{transition:opacity .9s cubic-bezier(.4,0,.2,1)}
-.chapter{transition:opacity .5s ease}
 
-/* ================= THE OIL SPLASH =================
-   Gooey metaballs: blur() gives every blob a soft alpha falloff, contrast() snaps it back to a
-   hard edge, and where two falloffs overlap their sum crosses the threshold early — so blobs
-   fuse as they pass rather than stacking. Both filters run on the compositor, and the whole thing
-   exists for one second, once. */
-/* blur high, contrast moderate: more blur widens the falloff so blobs reach for each other
-   sooner, while a gentler threshold keeps the edge liquid instead of cut from card */
-.intro-goo{position:absolute;inset:0;pointer-events:none;opacity:0;
-  filter:blur(30px) contrast(17) saturate(1.25)}
-.intro-goo .blob{position:absolute;left:50%;top:50%;border-radius:50%;
-  width:20vmin;height:20vmin;transform:translate(-50%,-50%) scale(0)}
 
-/* an oil film's palette: cyan through violet and magenta into amber and green */
-.blob.b1{background:#12f0ff} .blob.b2{background:#7b5cff} .blob.b3{background:#ff3ea5}
-.blob.b4{background:#ffb020} .blob.b5{background:#21ff9a} .blob.b6{background:#4d7bff}
-.blob.b7{background:#ff5cf0} .blob.b8{background:#00d4ff} .blob.b9{background:#ffe14d}
-
-/* each one leaves on its own heading, at its own rate — a splash is never radial */
-.intro[data-phase="dissolve"] .intro-goo{animation:gooin 1s linear forwards}
-@keyframes gooin{0%{opacity:0}8%{opacity:.88}70%{opacity:.8}100%{opacity:0}}
-.intro[data-phase="dissolve"] .blob{animation:fling 1s cubic-bezier(.16,.75,.3,1) forwards}
-@keyframes fling{
-  0%{transform:translate(-50%,-50%) scale(.06)}
-  100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(var(--s))}}
-.blob.b1{--x:-46vmin;--y:-16vmin;--s:2.6;animation-delay:0s}
-.blob.b2{--x:38vmin;--y:-30vmin;--s:3.1;animation-delay:.03s}
-.blob.b3{--x:14vmin;--y:44vmin;--s:2.8;animation-delay:.06s}
-.blob.b4{--x:-30vmin;--y:34vmin;--s:2.3;animation-delay:.02s}
-.blob.b5{--x:52vmin;--y:12vmin;--s:2.5;animation-delay:.09s}
-.blob.b6{--x:-8vmin;--y:-48vmin;--s:2.9;animation-delay:.05s}
-.blob.b7{--x:44vmin;--y:40vmin;--s:2.2;animation-delay:.12s}
-.blob.b8{--x:-52vmin;--y:8vmin;--s:2.4;animation-delay:.08s}
-.blob.b9{--x:6vmin;--y:6vmin;--s:4.2;animation-delay:0s}
-
-/* the thin film on top of the oil */
-.intro-sheen{position:absolute;left:50%;top:50%;width:60vmin;height:60vmin;border-radius:50%;
-  transform:translate(-50%,-50%) scale(.1);opacity:0;pointer-events:none;mix-blend-mode:overlay;
-  filter:blur(10px);
-  background:conic-gradient(from 210deg,#ff2fd0,#00e5ff,#7bff5c,#ffd24d,#ff2fd0)}
-.intro[data-phase="dissolve"] .intro-sheen{animation:sheen 1s cubic-bezier(.2,.7,.3,1) forwards}
-@keyframes sheen{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.1) rotate(0deg)}
-  20%{opacity:.85}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(6) rotate(65deg)}}
-
-@media (prefers-reduced-motion:reduce){.intro-goo,.intro-sheen{display:none}}
-
-/* ================= THE LIQUID CURSOR =================
-   Same goo as the intro splash, running continuously: blur widens each blob's alpha falloff,
-   contrast snaps the sum back to a hard edge, so the chain of eleven blobs behind the pointer
-   fuses into one stretching, gathering shape. `plus-lighter` keeps it additive over a dark scene
-   without washing the colours to white the way `screen` would. */
-.cursorgoo{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;
-  transition:opacity .45s ease;filter:blur(14px) contrast(16) saturate(1.2);
-  mix-blend-mode:plus-lighter}
-.cblob{position:absolute;top:0;left:0;width:46px;height:46px;border-radius:50%;
-  will-change:transform}
-/* an oil film again, but muted — this one is on screen for the whole visit */
-.cblob.c0{background:#12d9ff} .cblob.c1{background:#7b5cff}
-.cblob.c2{background:#ff3ea5} .cblob.c3{background:#21ffb0}
-
-@media (pointer:coarse),(prefers-reduced-motion:reduce){.cursorgoo{display:none}}

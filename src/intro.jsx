@@ -23,10 +23,7 @@ const DISCIPLINES =
 const HOLD = typeof location !== 'undefined' &&
   new URLSearchParams(location.search).get('intro') === 'hold'
 const SPIN_MS = HOLD ? 60000 : 2100
-// ?intro=splash jumps straight to the dissolve and holds the frame, for inspecting the oil
-const SPLASH_ONLY = typeof location !== 'undefined' &&
-  new URLSearchParams(location.search).get('intro') === 'splash'
-const DISSOLVE_MS = SPLASH_ONLY ? 60000 : 1000
+const DISSOLVE_MS = 1000
 
 export default function Intro({ onDone }) {
   const [phase, setPhase] = useState('spin')   // spin → dissolve → gone
@@ -60,7 +57,7 @@ export default function Intro({ onDone }) {
       t2 = setTimeout(finish, DISSOLVE_MS)
     }
 
-    t1 = setTimeout(dissolve, SPLASH_ONLY ? 120 : SPIN_MS)
+    t1 = setTimeout(dissolve, SPIN_MS)
     window.addEventListener('pointerdown', dissolve)
     window.addEventListener('keydown', dissolve)
     window.addEventListener('wheel', dissolve, { passive: true })
@@ -89,18 +86,6 @@ export default function Intro({ onDone }) {
   return (
     <div className="intro" data-phase={phase}>
       <div className="intro-stars" />
-      {/* THE OIL SPLASH. Nine coloured blobs thrown out of the centre inside a container that is
-          blurred and then contrast-thresholded — the classic gooey/metaball trick. Blur turns each
-          disc into a soft alpha falloff, contrast snaps that falloff back to a hard edge, and
-          where two falloffs overlap the sum crosses the threshold early, so the blobs MERGE into
-          one another as they pass instead of sliding over each other. That merging is the whole
-          difference between a splash and a bunch of dots. The sheen on top is the thin-film
-          iridescence: a conic spectrum blended over the goo, which is what makes it read as oil
-          rather than paint. */}
-      <div className="intro-goo">
-        {Array.from({ length: 9 }, (_, i) => <span key={i} className={`blob b${i + 1}`} />)}
-      </div>
-      <div className="intro-sheen" />
       <div className="intro-stage">
         <svg viewBox="0 0 400 400" className="intro-svg" aria-hidden="true">
           <defs>

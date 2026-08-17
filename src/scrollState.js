@@ -18,9 +18,6 @@ export const scroll = {
   // The whiteout that covers the cut from act zero to the column. Read by a DOM overlay, not by
   // anything in the scene — it has to sit over the canvas, the nav and everything else.
   flash: 0,
-  // The title beat between the column dive and the first project: the wall comes back, PROJECTS
-  // is set across it, and the glass turns edge-on in front of the type.
-  chapter: 0,
   // The closing act: the garden dissolves to black and the contact phone comes up.
   contact: 0,
   // a slower, longer ramp than `contact` — the apps land one by one across the whole close

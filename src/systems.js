@@ -28,5 +28,6 @@ export const SYSTEMS = [
     d:'A boardroom of AI agents — VC, skeptic, CTO, founder — that debate your startup idea from every angle and hand back a scored verdict.' },
 
   { id:'risk',    n:'RISK ASSESSMENT',  k:'Orchestration', hue:['#7cf5c0','#2b6cff'],
+    live:'https://prism-risk-rho.vercel.app/',
     d:'Four agents on Relevance AI — description, location, historical claims, safety — scoring risk in parallel, with conflict resolution producing explainable levels, premium adjustments and confidence.' },
 ];
