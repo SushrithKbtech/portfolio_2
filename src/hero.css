@@ -329,3 +329,19 @@ canvas.gl, .gl canvas, .cs-canvas canvas{
   100%{opacity:0;transform:translate(-50%,-50%) scale(6) rotate(65deg)}}
 
 @media (prefers-reduced-motion:reduce){.intro-goo,.intro-sheen{display:none}}
+
+/* ================= THE LIQUID CURSOR =================
+   Same goo as the intro splash, running continuously: blur widens each blob's alpha falloff,
+   contrast snaps the sum back to a hard edge, so the chain of eleven blobs behind the pointer
+   fuses into one stretching, gathering shape. `plus-lighter` keeps it additive over a dark scene
+   without washing the colours to white the way `screen` would. */
+.cursorgoo{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;
+  transition:opacity .45s ease;filter:blur(14px) contrast(16) saturate(1.2);
+  mix-blend-mode:plus-lighter}
+.cblob{position:absolute;top:0;left:0;width:46px;height:46px;border-radius:50%;
+  will-change:transform}
+/* an oil film again, but muted — this one is on screen for the whole visit */
+.cblob.c0{background:#12d9ff} .cblob.c1{background:#7b5cff}
+.cblob.c2{background:#ff3ea5} .cblob.c3{background:#21ffb0}
+
+@media (pointer:coarse),(prefers-reduced-motion:reduce){.cursorgoo{display:none}}

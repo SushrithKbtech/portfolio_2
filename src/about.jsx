@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import NeuralBackdrop from './neural.jsx'
 import OsLogin from './osLogin.jsx'
+import LiquidCursor from './cursor.jsx'
 
 /* ABOUT — every word here comes from github.com/SushrithKbtech/my-portfolio. Nothing is invented:
    the bio, the numbers, the skill levels, the dates and the certificate scores are lifted from
@@ -102,6 +103,7 @@ export default function About() {
   return (
     <div className="about" ref={root}>
       {!booted && <OsLogin onDone={() => setBooted(true)} />}
+      <LiquidCursor />
       <NeuralBackdrop />
       <nav>
         <span className="mark"><a href="/">SK</a></span>

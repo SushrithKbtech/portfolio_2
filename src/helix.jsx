@@ -10,11 +10,12 @@ import BoneSpine from './boneSpine.jsx'
 import Blossoms from './blossoms.jsx'
 import Finale from './finale.jsx'
 import Backdrop from './backdrop.jsx'
-import { HeroRoom, HeroChart, SKObject } from './hero.jsx'
+import { HeroRoom, SKObject } from './hero.jsx'
 import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
 import { fitZ, dpr as DPR } from './device'
 import Intro from './intro.jsx'
+import LiquidCursor from './cursor.jsx'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -252,7 +253,6 @@ function Scene({ onFocus }) {
 
       {/* act zero */}
       <HeroRoom />
-      <HeroChart />
       <Suspense fallback={null}><SKObject /></Suspense>
 
       {/* the world it opens into */}
@@ -387,6 +387,7 @@ export default function Helix() {
       {/* the rings spin up over everything, then tilt away to reveal the hero already running */}
       {intro && <Intro onDone={() => setIntro(false)} />}
 
+      <LiquidCursor />
       <Whiteout />
       <ChapterTitle />
       <ContactStage />

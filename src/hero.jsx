@@ -320,51 +320,6 @@ export function HeroRoom() {
   )
 }
 
-/* ---------- the focus chart ----------
-   A lens-test target: thin white rings on black, twisted into a vortex so it winds rather than
-   pulses. It's the highest-contrast thing in the room, which is exactly what a refractive object
-   needs behind it to have anything to say. */
-export function HeroChart() {
-  const mat = useMemo(() => new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, toneMapped: false,
-    uniforms: { uT: { value: 0 }, uFade: { value: 1 } },
-    vertexShader: `
-      varying vec2 vUv;
-      void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-    fragmentShader: `
-      uniform float uT, uFade;
-      varying vec2 vUv;
-      void main(){
-        vec2 p = vUv - 0.5;
-        float r = length(p) * 2.0;
-        float a = atan(p.y, p.x);
-
-        // The spiral RUNS OUTWARD. A ring sits where r * 132 - t * speed is constant, so as t
-        // climbs, r climbs with it and every ring travels from the centre to the rim — the chart
-        // reads as something pulsing out of the object rather than a pattern painted behind it.
-        float rings = sin(r * 132.0 - a * 2.2 - uT * 2.6);
-        float m = smoothstep(0.80, 1.0, rings);
-        float spokes = smoothstep(0.994, 1.0, abs(sin(a * 8.0))) * smoothstep(0.22, 0.48, r);
-
-        float ink = clamp(m + spokes * 0.7, 0.0, 1.0);
-        float fade = smoothstep(0.55, 0.06, r);
-        vec3 col = mix(vec3(0.012, 0.016, 0.030), vec3(0.82, 0.87, 1.0), ink);
-        gl_FragColor = vec4(col, fade * 0.75 * uFade);
-      }`,
-  }), [])
-  const ref = useRef()
-  useFrame(({ clock }) => {
-    mat.uniforms.uT.value = clock.elapsedTime
-    mat.uniforms.uFade.value = 1 - scroll.heroOut
-    if (ref.current) ref.current.visible = scroll.heroOut < 0.995
-  })
-  return (
-    <mesh ref={ref} position={[0, 0, -15]} renderOrder={-5} material={mat}>
-      <planeGeometry args={[30, 30]} />
-    </mesh>
-  )
-}
-
 /* ---------- the object: a solid glass SK ----------
    Built from stroke centrelines rather than a font file, because a typeface JSON is one more
    binary this repo doesn't ship. Each stroke is offset either side of its centreline into a
