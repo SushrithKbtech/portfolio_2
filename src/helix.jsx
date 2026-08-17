@@ -94,6 +94,8 @@ function Card({ sys, i, onFocus }) {
   }, [vid, i])
 
   const panel = useMemo(() => roundedPanel(6.7, 4.26, 0.17), [])
+  // a hair larger, sitting just behind: the sliver that shows past the poster is the frame
+  const frame = useMemo(() => roundedPanel(6.86, 4.42, 0.2), [])
   const was = useRef(false)
   const playing = useRef(false)
   const focused = useRef(0)   // how square-on this panel is, read by the click handler
@@ -157,6 +159,12 @@ function Card({ sys, i, onFocus }) {
       {/* A DARK BACKING PLATE. The panel sits in front of a lit garden with depthWrite off, so the
           planting was showing straight through the artwork and washing it out. This blocks it —
           the poster now reads against near-black instead of against whatever is behind the card. */}
+      {/* WARM EDGE. The reference's panels are bounded by a thin gold rule, which is what stops
+          them dissolving into the dark scene behind them. */}
+      <mesh geometry={frame} position={[0, 0, -0.02]} renderOrder={0}>
+        <meshBasicMaterial color="#c9ab74" toneMapped={false} side={THREE.DoubleSide}
+          transparent opacity={0.88} depthWrite={false} />
+      </mesh>
       <mesh geometry={panel} position={[0, 0, -0.012]} renderOrder={1}>
         <meshBasicMaterial color="#04060d" toneMapped={false} side={THREE.DoubleSide}
           transparent opacity={0.94} depthWrite={false} />
@@ -186,7 +194,9 @@ function Rig() {
 
     /* THE CUT IS COVERED. The whiteout peaks at 0.085 and act zero dies underneath it, so the
        glass SK and the column are never both legible in the same frame. */
-    scroll.flash   = Math.exp(-Math.pow((p - 0.085) / 0.020, 2))
+    /* The whiteout is now a glow rather than a cover: at full strength it hid the convergence,
+       which is the transition worth watching. */
+    scroll.flash   = Math.exp(-Math.pow((p - 0.085) / 0.020, 2)) * 0.42
     scroll.heroOut = THREE.MathUtils.smoothstep(p, 0.062, 0.092)
     scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.078, 0.170)
     // the column's whole entrance sits under the flash, so you never watch it arrive

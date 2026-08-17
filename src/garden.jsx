@@ -203,10 +203,13 @@ export default function Garden() {
         // staggered detonation so it unfurls instead of popping
         float b = clamp((uBloom - aRnd * 0.38) / 0.62, 0.0, 1.0);
         b = b * b * (3.0 - 2.0 * b);
-        // NO SPIRAL ON THE WAY OUT. aStart is the coiled DNA tail, and at any b below ~0.3 you
-        // could read the coil sitting there before it unwound. Collapsed to 4% it's a seed the
-        // size of a fist, so the field flashes and detonates from a point instead.
-        vec3 seed = aStart * 0.04;
+        /* BIG BANG. Scaling the DNA tail down still left the tail's SHAPE — a thin vertical
+           dashed line hanging in the middle of frame before it unwound. The seed is now a tiny
+           SPHERE instead: every point starts a fraction of a unit from the origin along the
+           direction of its own final position, so the field is a single bright speck that throws
+           itself outward into the space it will occupy. Radial, not unrolled. */
+        vec3 dir = normalize(position + vec3(0.0001, 0.0001, 0.0001));
+        vec3 seed = dir * (0.18 + aRnd * 0.5);
         vec3 p = mix(seed, position, b);
         // idle drift
         float w = aRnd * 6.28 + uT * 0.22;
