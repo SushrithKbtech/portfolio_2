@@ -57,6 +57,7 @@ optional and falls back to something generated at runtime.
 - `?s=0.42` — pin the scroll to a fixed position, for screenshots
 - `?boot=slow` — run the about-page login at a third speed
 - `?intro=hold` — park the opening rings on their spin instead of dissolving
+- `?intro=splash` — jump straight to the oil splash and hold the sequence there
 
 ---
 

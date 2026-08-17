@@ -211,7 +211,8 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
    past the camera. Everything is transform and opacity, so it stays on the compositor. */
 .intro{position:fixed;inset:0;z-index:55;background:#04050a;overflow:hidden;
   display:grid;place-items:center;perspective:1200px}
-.intro[data-phase="dissolve"]{animation:introfade 1s cubic-bezier(.4,0,.2,1) forwards}
+.intro[data-phase="dissolve"]{animation:introfade 1s cubic-bezier(.4,0,.2,1) forwards;
+  pointer-events:none}
 @keyframes introfade{0%{opacity:1}60%{opacity:.55}100%{opacity:0}}
 
 /* the starfield it expands into */
@@ -264,25 +265,6 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
   .intro{display:none}
 }
 
-/* THE SPLASH — colour thrown out of the centre as the rings let go.
-   Two waves at different rates and hues: the first is the hit, the second trails it and carries
-   the warmer end of the palette, so the bloom has an inside and an outside rather than being one
-   flat disc growing. Both start at zero scale and are invisible until the dissolve begins. */
-.intro-splash{position:absolute;left:50%;top:50%;width:52vmin;height:52vmin;border-radius:50%;
-  transform:translate(-50%,-50%) scale(.05);opacity:0;pointer-events:none;filter:blur(14px);
-  background:
-    radial-gradient(circle at 50% 50%,rgba(255,255,255,.95) 0%,rgba(120,235,255,.85) 18%,
-      rgba(96,120,255,.7) 38%,rgba(178,90,255,.55) 58%,rgba(255,90,190,.35) 76%,transparent 88%)}
-.intro-splash.two{width:38vmin;height:38vmin;filter:blur(22px);
-  background:
-    radial-gradient(circle at 50% 50%,rgba(255,240,200,.9) 0%,rgba(255,170,90,.7) 30%,
-      rgba(255,90,140,.5) 58%,rgba(150,80,255,.35) 80%,transparent 92%)}
-.intro[data-phase="dissolve"] .intro-splash{animation:splash 1s cubic-bezier(.22,.7,.3,1) forwards}
-.intro[data-phase="dissolve"] .intro-splash.two{animation:splash 1s cubic-bezier(.3,.6,.35,1) .08s forwards}
-@keyframes splash{
-  0%{opacity:0;transform:translate(-50%,-50%) scale(.05)}
-  18%{opacity:1}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(7.5)}}
 
 /* ================= VIBRANCE =================
    With the post-processing stack gone the render is honest but flat. This is the cheapest
@@ -300,3 +282,50 @@ canvas.gl, .gl canvas, .cs-canvas canvas{
 /* EVERY STATE CHANGE EASES. Nothing on the page is allowed to snap between states any more. */
 .ghosts,.hud,.scrollcue,.cap{transition:opacity .9s cubic-bezier(.4,0,.2,1)}
 .chapter{transition:opacity .5s ease}
+
+/* ================= THE OIL SPLASH =================
+   Gooey metaballs: blur() gives every blob a soft alpha falloff, contrast() snaps it back to a
+   hard edge, and where two falloffs overlap their sum crosses the threshold early — so blobs
+   fuse as they pass rather than stacking. Both filters run on the compositor, and the whole thing
+   exists for one second, once. */
+/* blur high, contrast moderate: more blur widens the falloff so blobs reach for each other
+   sooner, while a gentler threshold keeps the edge liquid instead of cut from card */
+.intro-goo{position:absolute;inset:0;pointer-events:none;opacity:0;
+  filter:blur(30px) contrast(17) saturate(1.25)}
+.intro-goo .blob{position:absolute;left:50%;top:50%;border-radius:50%;
+  width:20vmin;height:20vmin;transform:translate(-50%,-50%) scale(0)}
+
+/* an oil film's palette: cyan through violet and magenta into amber and green */
+.blob.b1{background:#12f0ff} .blob.b2{background:#7b5cff} .blob.b3{background:#ff3ea5}
+.blob.b4{background:#ffb020} .blob.b5{background:#21ff9a} .blob.b6{background:#4d7bff}
+.blob.b7{background:#ff5cf0} .blob.b8{background:#00d4ff} .blob.b9{background:#ffe14d}
+
+/* each one leaves on its own heading, at its own rate — a splash is never radial */
+.intro[data-phase="dissolve"] .intro-goo{animation:gooin 1s linear forwards}
+@keyframes gooin{0%{opacity:0}8%{opacity:.88}70%{opacity:.8}100%{opacity:0}}
+.intro[data-phase="dissolve"] .blob{animation:fling 1s cubic-bezier(.16,.75,.3,1) forwards}
+@keyframes fling{
+  0%{transform:translate(-50%,-50%) scale(.06)}
+  100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(var(--s))}}
+.blob.b1{--x:-46vmin;--y:-16vmin;--s:2.6;animation-delay:0s}
+.blob.b2{--x:38vmin;--y:-30vmin;--s:3.1;animation-delay:.03s}
+.blob.b3{--x:14vmin;--y:44vmin;--s:2.8;animation-delay:.06s}
+.blob.b4{--x:-30vmin;--y:34vmin;--s:2.3;animation-delay:.02s}
+.blob.b5{--x:52vmin;--y:12vmin;--s:2.5;animation-delay:.09s}
+.blob.b6{--x:-8vmin;--y:-48vmin;--s:2.9;animation-delay:.05s}
+.blob.b7{--x:44vmin;--y:40vmin;--s:2.2;animation-delay:.12s}
+.blob.b8{--x:-52vmin;--y:8vmin;--s:2.4;animation-delay:.08s}
+.blob.b9{--x:6vmin;--y:6vmin;--s:4.2;animation-delay:0s}
+
+/* the thin film on top of the oil */
+.intro-sheen{position:absolute;left:50%;top:50%;width:60vmin;height:60vmin;border-radius:50%;
+  transform:translate(-50%,-50%) scale(.1);opacity:0;pointer-events:none;mix-blend-mode:overlay;
+  filter:blur(10px);
+  background:conic-gradient(from 210deg,#ff2fd0,#00e5ff,#7bff5c,#ffd24d,#ff2fd0)}
+.intro[data-phase="dissolve"] .intro-sheen{animation:sheen 1s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes sheen{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.1) rotate(0deg)}
+  20%{opacity:.85}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(6) rotate(65deg)}}
+
+@media (prefers-reduced-motion:reduce){.intro-goo,.intro-sheen{display:none}}
