@@ -151,16 +151,29 @@ export default function Leaves({ height = 20 }) {
     const CLUMPS = Math.max(6, Math.round(N * 0.7))
     const anchors = Array.from({ length: CLUMPS }, () => ({
       a: Math.random() * Math.PI * 2,
-      r: 3.0 + Math.random() * 6.5,
+      r: 5.8 + Math.random() * 6.4,
       y: (Math.random() - 0.5) * height * 1.12,
     }))
     // the reference's range: cream and gold through to cyan, with the odd cool violet
     const pal = ['#ffe6b0', '#ffd489', '#fff3d6', '#8fe8ff', '#6ecfff', '#bfe8ff', '#c9a3ff']
+    /* NOTHING SITS ON THE BONE. A leaf whose x falls inside the column's own width would hang
+       over the vertebrae — and the column is the subject, not a surface to decorate. So any leaf
+       that lands in that strip is mirrored to the BACK half of the ring, where the mesh occludes
+       it, instead of being nudged sideways: mirroring keeps its x, so the ring stays evenly
+       filled left to right, and only the near side of the strip is emptied.
+
+       This is also why the leaves no longer travel around the column with the scroll. They still
+       sway, bob, tumble and ride the column's descent, but an angle that advances would carry
+       them straight back across the bone a few seconds later and undo the whole arrangement. */
+    const CLEAR = 5.0
     return Array.from({ length: N }, (_, i) => {
       const k = anchors[i % CLUMPS]
+      let a = k.a + (Math.random() - 0.5) * 1.3
+      const r = k.r + (Math.random() - 0.5) * 2.6
+      if (Math.abs(Math.cos(a) * r) < CLEAR && Math.sin(a) > 0) a = -a
       return {
-        a: k.a + (Math.random() - 0.5) * 1.3,
-        r: k.r + (Math.random() - 0.5) * 2.6,
+        a,
+        r,
         y: k.y + (Math.random() - 0.5) * height * 0.3,
         s: 1.1 + Math.pow(Math.random(), 1.7) * 2.5,
         ph: Math.random() * Math.PI * 2,
@@ -169,7 +182,7 @@ export default function Leaves({ height = 20 }) {
         roll: Math.random() * Math.PI * 2,
         tilt: (Math.random() - 0.5) * 0.9,
         yaw: (Math.random() - 0.5) * 1.2,
-        orbit: (Math.random() - 0.5) * 0.05,
+        drift: (Math.random() - 0.5) * 0.03,   // a breath either way, never a lap
         col: pal[(Math.random() * pal.length) | 0],
       }
     })
@@ -196,8 +209,8 @@ export default function Leaves({ height = 20 }) {
 
     for (let i = 0; i < items.length; i++) {
       const L = items[i]
-      // turning around the column as you descend, each at its own rate
-      const a = L.a + t * L.orbit + scroll.p * 1.1
+      // it breathes on its bearing rather than travelling round it — see the note above
+      const a = L.a + Math.sin(t * L.sway + L.ph) * L.drift
       const r = L.r + Math.sin(t * L.sway + L.ph) * 0.35
       dummy.position.set(Math.cos(a) * r, L.y + Math.sin(t * L.bob + L.ph) * 0.55, Math.sin(a) * r)
       /* Rolled around the view axis and only tipped a little out of it: a leaf turned edge-on is a
