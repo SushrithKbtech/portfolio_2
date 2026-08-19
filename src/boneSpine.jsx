@@ -7,6 +7,7 @@ import { scroll } from './scrollState'
 import Optional from './assetGuard.jsx'
 import { proceduralSpine } from './procAssets'
 import { budget } from './device'
+import Leaves from './leaves.jsx'
 
 /* A single FULL vertebral column, cervical down to the sacrum.
    Not a vertebra rubber-stamped: you descend the real thing, and by the end of
@@ -124,130 +125,6 @@ function Swarm({ geometry, height }) {
   return <points ref={ref} geometry={geo} material={mat} frustumCulled={false} />
 }
 
-/* THE SHED — the column giving off matter.
-   Every particle owns a birth radius near the bone and a direction away from the axis, and its
-   life is a sawtooth on the clock: it appears close in, drifts outward, swells slightly and fades
-   as it goes, then wraps back to the start. Because each has its own phase offset the cloud never
-   pulses in unison — at any instant some are new and tight to the surface while others are far
-   out and nearly gone, which is what reads as continuous shedding rather than an explosion.
-
-   THEY ARE GLASS. Still one draw call for the lot — they are sprites, not geometry — but each one
-   is SHADED as a sphere: the surface normal is recovered from the point coordinate, so every bead
-   has a real curved face to catch the key light on, a specular hot spot that sits where the light
-   actually is, a fresnel rim that brightens toward the edge the way glass does, and a second
-   softer highlight coming back through its far wall so it reads as hollow rather than as a marble.
-   The rim colour is thin-film interference, shifted per bead, which is where the oil-slick comes
-   from. Blended normally rather than additively: additive discs are LIGHT, and these have to be
-   OBJECTS you could pick up. */
-function Shed({ height }) {
-  const ref = useRef()
-  const N = Math.round(2600 * budget)
-
-  const geo = useMemo(() => {
-    const pos = new Float32Array(N * 3)     // birth point: angle and radius around the axis
-    const rnd = new Float32Array(N)         // phase offset, so lives don't sync
-    const siz = new Float32Array(N)
-    const col = new Float32Array(N * 3)
-    const c = new THREE.Color()
-    // the column's own dichroic palette, so the dust looks like it came off the bone
-    const pal = ['#ffb8e0', '#9fe8ff', '#c8a6ff', '#a8ffe0', '#ffe6c2', '#e8eeff', '#6b7fb0', '#4f5f8c']
-    /* CLUMPED, not evenly sprinkled. The reference's balls come off the bone in clusters with
-       clear black between them; an even field reads as noise. So seed a set of anchors along the
-       column and hang each particle off one of them. */
-    const CLUMPS = 34
-    const anchors = Array.from({ length: CLUMPS }, () => ({
-      a: Math.random() * Math.PI * 2,
-      r: 1.5 + Math.random() * 1.6,
-      y: (Math.random() - 0.5) * height * 0.92,
-    }))
-    for (let i = 0; i < N; i++) {
-      const k = anchors[i % CLUMPS]
-      const spread = 0.5 + Math.random() * 1.5
-      const off = Math.random() * Math.PI * 2
-      const a = k.a + Math.cos(off) * spread * 0.16
-      const r = k.r + Math.sin(off) * spread * 0.5
-      pos[i * 3] = Math.cos(a) * r
-      pos[i * 3 + 1] = k.y + (Math.random() - 0.5) * spread * 2.4
-      pos[i * 3 + 2] = Math.sin(a) * r
-      rnd[i] = Math.random()
-      siz[i] = 1.1 + Math.pow(Math.random(), 1.7) * 7.0     // a few big ones, most small
-      c.set(pal[(Math.random() * pal.length) | 0]).multiplyScalar(0.55 + Math.random() * 0.8)
-      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b
-    }
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    g.setAttribute('aRnd', new THREE.BufferAttribute(rnd, 1))
-    g.setAttribute('aSize', new THREE.BufferAttribute(siz, 1))
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3))
-    return g
-  }, [N, height])
-
-  const mat = useMemo(() => new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.NormalBlending, vertexColors: true,
-    uniforms: { uT: { value: 0 }, uIn: { value: 0 }, uPix: { value: Math.min(window.devicePixelRatio, 2) } },
-    vertexShader: `
-      attribute float aRnd; attribute float aSize;
-      uniform float uT, uPix;
-      varying vec3 vC; varying float vA; varying float vSeed;
-      void main(){
-        vC = color;
-        vSeed = aRnd;
-        // life 0..1, each particle offset by its own seed
-        float life = fract(uT * (0.055 + aRnd * 0.055) + aRnd);
-        vec3 p = position;
-        vec2 outward = normalize(p.xz);
-        p.xz += outward * life * (5.5 + aRnd * 7.0);      // away from the axis
-        p.y += (aRnd - 0.5) * life * 3.0;                 // and a little drift along it
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        float depth = -mv.z;
-        // in fast, out slow: bright the instant it leaves the bone, then a long fade
-        vA = smoothstep(0.0, 0.06, life) * (1.0 - smoothstep(0.25, 1.0, life));
-        gl_PointSize = min(aSize * uPix * (52.0 / max(depth, 0.001)) * (1.0 + life * 1.5), 34.0 * uPix);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      uniform float uIn;
-      varying vec3 vC; varying float vA; varying float vSeed;
-      void main(){
-        vec2 uv = gl_PointCoord * 2.0 - 1.0;
-        float r2 = dot(uv, uv);
-        if (r2 > 1.0) discard;
-        // THE SPRITE IS A SPHERE. Everything below hangs off this one line: the z of the normal is
-        // the height of the dome above the disc, so the flat quad gets a curved surface for free.
-        vec3 n = vec3(uv, sqrt(max(0.0, 1.0 - r2)));
-        vec3 L = normalize(vec3(-0.45, 0.72, 0.55));
-
-        /* Glass is clear where you look straight through it and bright where you look ALONG it.
-           The exponent is what decides whether this is a bubble or a wire ring: at 3.0 the bright
-           band was pinned to the last few pixels of the silhouette and the beads read as hoops,
-           so it comes down to 1.8 and the brightness climbs across the whole outer half. */
-        float fres = pow(1.0 - n.z, 1.8);
-        float refl = max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0);
-        float spec = pow(refl, 26.0);                    // the wet highlight
-        float spark = pow(refl, 160.0);                  // and the pinpoint inside it
-        // light coming back through the far wall — this is what separates a bubble from a bead
-        float back = pow(max(dot(-L, n), 0.0), 2.5) * 0.6;
-        // thin film on the rim, phase-shifted per bead so no two are the same colour
-        vec3 iri = 0.5 + 0.5 * cos(6.2831 * (fres * 1.1 + vSeed + vec3(0.0, 0.33, 0.67)));
-
-        vec3 col = vC * (0.30 + back) + iri * fres * 1.05 + vec3(1.6) * (spec * 0.55 + spark);
-        float edge = smoothstep(1.0, 0.86, r2);          // antialiased silhouette
-        float a = (0.22 + fres * 0.62 + spec * 0.5 + spark) * edge;
-        gl_FragColor = vec4(col, a * vA * uIn);
-      }`,
-  }), [])
-
-  useFrame(({ clock }) => {
-    mat.uniforms.uT.value = clock.elapsedTime
-    // arrives with the column and leaves with it
-    const out = THREE.MathUtils.smoothstep(scroll.fin, 0.0, 0.5)
-    mat.uniforms.uIn.value = scroll.spineIn * (1 - out)
-    if (ref.current) ref.current.visible = mat.uniforms.uIn.value > 0.01
-  })
-
-  return <points ref={ref} geometry={geo} material={mat} frustumCulled={false} />
-}
-
 /* The column proper. It takes its geometry as a prop so the same animation drives either the
    real mesh or the procedural stand-in below. */
 function Column({ geometry, height, map }) {
@@ -307,7 +184,7 @@ function Column({ geometry, height, map }) {
     <group ref={grp}>
       <mesh ref={ref} geometry={geometry} material={material} frustumCulled={false} />
       <Swarm geometry={geometry} height={height} />
-      <Shed height={height} />
+      <Leaves height={height} />
     </group>
   )
 }

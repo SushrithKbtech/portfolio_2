@@ -24,8 +24,14 @@ export const scroll = {
   // The whiteout that covers the cut from act zero to the column. Read by a DOM overlay, not by
   // anything in the scene — it has to sit over the canvas, the nav and everything else.
   flash: 0,
-  // The closing act: the garden dissolves to black and the contact phone comes up.
+  /* The closing act, in two beats that must NOT overlap:
+       contact  the frame pixelates, tears and turns to black, block by block
+       reveal   and only THEN does the handset appear, opening out of a seam of light
+     Running them together made the phone fade up through the breaking image, which is a
+     dissolve. Separated, the screen goes empty first and the thing appears in the empty — which
+     is the trick. */
   contact: 0,
+  reveal: 0,
   // a slower, longer ramp than `contact` — the apps land one by one across the whole close
   contactApps: 0,
   // Cursor in normalised device coords (-1..1). Written by Rig, read by the busts so they

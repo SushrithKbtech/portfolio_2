@@ -17,6 +17,7 @@ import ContactStage from './contact.jsx'
 import { fitZ, dpr as DPR } from './device'
 import Intro from './intro.jsx'
 import Hyperspace from './hyperspace.jsx'
+import PixelFlip from './pixelFlip.jsx'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -385,12 +386,23 @@ function Rig() {
     scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.140, 0.220)
     // the column's whole entrance sits under the flash, so you never watch it arrive
     scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.148, 0.215)
-    scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.97)
-    /* THE CLOSE. It starts the moment the last project has gone past rather than in the final few
-       percent: the garden dissolves to black from 0.76, the phone is up by 0.90, and the apps land
-       one at a time across the rest — so the end of the scroll is the fourth one arriving. */
-    scroll.contact = THREE.MathUtils.smoothstep(p, 0.780, 0.915)
-    scroll.contactApps = THREE.MathUtils.clamp((p - 0.862) / 0.138, 0, 1)
+    /* The garden act is COMPRESSED, and deliberately: it used to run all the way to 0.97, which
+       left it arriving under the close rather than before it. It is fully planted by 0.875 and
+       then holds — it gets its own stretch of frame, and only after that does the picture start
+       breaking up. */
+    scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.875)
+    /* THE CLOSE, IN THREE BEATS THAT DO NOT OVERLAP. The last project goes past, the frame
+       breaks up into blocks and turns to black, and then — on an empty screen — the handset
+       opens out of a seam of light and the apps land on it one at a time. Each beat finishes
+       before the next begins, because the whole point is that the phone is not there and then
+       it is. */
+    scroll.contact = THREE.MathUtils.smoothstep(p, 0.878, 0.930)   // the frame coming apart
+    /* NO DEAD AIR. The last blocks turn black around 0.85 of `contact` — the flip's own wave
+       finishes well before its progress value reaches 1 — so the seam of light starts THERE, not
+       at the end of it. Held back any later there was a third of a screen of scrolling with
+       nothing on it, which turns a trick into a wait. */
+    scroll.reveal = THREE.MathUtils.smoothstep(p, 0.915, 0.958)    // the handset appearing
+    scroll.contactApps = THREE.MathUtils.clamp((p - 0.950) / 0.050, 0, 1)
     scroll.gardenY = p * TOTAL_SLOTS * PITCH * 0.42
 
     const idx = THREE.MathUtils.clamp(Math.round(p * TOTAL_SLOTS - START), 0, SYSTEMS.length - 1)
@@ -462,6 +474,11 @@ function Scene({ onFocus }) {
         <Bloom intensity={0.62} luminanceThreshold={0.85} luminanceSmoothing={0.3}
           mipmapBlur radius={0.4} />
         <Noise premultiply opacity={0.05} />
+        {/* LAST IN THE STACK, because it is the whole frame breaking up — everything above has
+            to have already happened by the time the blocks turn. Idle at zero cost until the
+            gallery ends: it reads scroll.contact itself and returns the input untouched while
+            that is zero. */}
+        <PixelFlip />
       </EffectComposer>
 
     </>
@@ -519,7 +536,7 @@ export default function Helix() {
     const forced = parseFloat(new URLSearchParams(location.search).get('s'))
     if (!Number.isNaN(forced)) {
       scroll.target = forced; scroll.p = forced
-      setGone(forced > 0.045); setInWork(forced > 0.26 && forced < FIN_FROM + 0.03)
+      setGone(forced > 0.045); setInWork(forced > 0.26 && forced < 0.785)
       return
     }
     const lenis = new Lenis({ duration: 1.5, smoothWheel: true, wheelMultiplier: 0.85 })
@@ -527,7 +544,9 @@ export default function Helix() {
     lenis.on('scroll', ({ progress }) => {
       scroll.target = progress
       setGone(progress > 0.045)
-      setInWork(progress > 0.26 && progress < FIN_FROM + 0.03)
+      // out before the frame starts breaking up: the read-out belongs to the work, and the work
+      // is over the moment the pixel flip begins
+      setInWork(progress > 0.26 && progress < 0.785)
     })
     let raf; const loop = t => { lenis.raf(t); raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop)

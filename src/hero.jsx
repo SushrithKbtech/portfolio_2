@@ -136,13 +136,20 @@ export function HeroRoom() {
       uT: { value: 0 }, uFade: { value: 1 }, uTicker: { value: 1 },
       uText: { value: stripTexture(`${LINES.join(' ')}   ·   `, '0.30em') },
       uRoles: { value: stripTexture(ROLES, '0.10em') },
+      // the cursor, in 0..1 screen space, lerped — plus where it was last frame and how fast it
+      // is going, which is what makes the wall react to a flick differently than to a drift
+      uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      uPrevMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      uMouseSpeed: { value: 0 },
+      uRes: { value: new THREE.Vector2(1, 1) },
     },
     vertexShader: `
       varying vec2 vUv;
       void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
     fragmentShader: `
-      uniform float uT, uFade, uTicker;
+      uniform float uT, uFade, uTicker, uMouseSpeed;
       uniform sampler2D uText, uRoles;
+      uniform vec2 uMouse, uPrevMouse, uRes;
       varying vec2 vUv;
 
       float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
@@ -187,10 +194,32 @@ export function HeroRoom() {
       }
 
       void main(){
+        /* THE CURSOR PUSHES THE WALL.
+           Worked out in SCREEN space, not in the wall's own coordinates: the pointer is on the
+           screen, and a cylinder's uv stretches and compresses across the frame, so a ripple
+           computed in uv would drift away from the cursor at the edges. The distance is aspect
+           corrected — on a wide monitor an uncorrected radius is an ellipse.
+
+           The displacement is a smooth well around the pointer with a standing wave riding on it,
+           pushed outward along the direction away from the cursor, and it grows with how fast you
+           are moving: still, it is a barely-there bulge; flicked, the panels visibly swim. The
+           velocity term drags the surface the way you moved, which is what stops it feeling like
+           a fixed lens under the pointer. */
+        vec2 sp = gl_FragCoord.xy / uRes;
+        vec2 md = sp - uMouse;
+        md.x *= uRes.x / uRes.y;
+        float mdist = length(md);
+        float fall = smoothstep(0.34, 0.0, mdist);
+        float rip = sin(mdist * 30.0 - uT * 3.4);
+        float amp = (0.004 + uMouseSpeed * 0.013) * fall * (0.62 + 0.38 * rip);
+        vec2 push = md / max(mdist, 0.0001) * amp + (uMouse - uPrevMouse) * fall * 2.6;
+        // screen displacement -> wall uv; the arc is wider than the frame, hence the scale down
+        vec2 vu = vUv + push * vec2(0.5, 0.72);
+
         // Big panels, not fine graph paper: the reference wall is maybe two dozen screens across
         // and you can count them.
         vec2 cells = vec2(24.0, 11.0);
-        vec2 g = vUv * cells;
+        vec2 g = vu * cells;
         vec2 id = floor(g), f = fract(g);
 
         float n  = hash(id);
@@ -227,7 +256,7 @@ export function HeroRoom() {
 
         // --- THE SPILL. Every bit of blue in the reference comes off the object and lands on the
         // wall behind it: brightest square in the middle of the frame, falling away fast.
-        float spill = exp(-pow((vUv.y - 0.5) * 4.2, 2.0));
+        float spill = exp(-pow((vu.y - 0.5) * 4.2, 2.0));
 
         // --- ghost triangle glyphs, rare, drawn inside their cell
         float tri = 0.0;
@@ -246,35 +275,45 @@ export function HeroRoom() {
 
         // hold the light at eye level; the wall falls to nothing at its top and bottom edges and
         // again at the two sides, so it never shows a hard boundary
-        float depth = smoothstep(0.0, 0.30, vUv.y) * smoothstep(1.0, 0.72, vUv.y)
-                    * smoothstep(0.0, 0.10, vUv.x) * smoothstep(1.0, 0.90, vUv.x);
+        float depth = smoothstep(0.0, 0.30, vu.y) * smoothstep(1.0, 0.72, vu.y)
+                    * smoothstep(0.0, 0.10, vu.x) * smoothstep(1.0, 0.90, vu.x);
 
         // --- THE NAME, RUNNING ON THE WALL. Two tickers crossing the middle of the tunnel in
         // opposite directions: the main one big and bright at eye level behind the object, a
         // smaller, dimmer one above it. Multiplied by the panel face so the bezels and grid lines
         // cut straight through the letters — it has to be ON the screens, not floating over them.
-        float ticker = 0.0;
+        vec3 ticker = vec3(0.0);
         {
-          // 1.0 - vUv.x because we're looking at the wall's INSIDE face: sampled straight, every
+          /* SEAM TEAR. Each panel carries its own fixed offset, scaled by how close the cursor is
+             and how fast it is moving — so as you sweep across the wall whole screens jump
+             sideways against their neighbours and snap back, and the seams between them become
+             visible for a moment. */
+          float seam = (hash(id + 31.0) - 0.5) * 0.018 * fall * uMouseSpeed;
+          // 1.0 - vu.x because we're looking at the wall's INSIDE face: sampled straight, every
           // letter comes out mirrored.
-          float x = 1.0 - vUv.x;
+          float x = 1.0 - vu.x + seam;
+          // CHROMATIC DISPERSION, and only where there is displacement to justify it: the red and
+          // blue copies of the name pull apart under the cursor and close again behind it.
+          float ca = fall * (0.0015 + uMouseSpeed * 0.006);
           // THE NAME: one copy per wall, set wide and tall. Fewer repeats = bigger letters.
-          float band = (vUv.y - 0.50) / 0.235 + 0.5;      // main line, at eye level
+          float band = (vu.y - 0.50) / 0.235 + 0.5;       // main line, at eye level
           if (band > 0.0 && band < 1.0) {
             float u = fract(x * 0.95 + uT * 0.026);
-            ticker += texture2D(uText, vec2(u, band)).r * 1.0;
+            ticker.r += texture2D(uText, vec2(fract(u + ca), band)).r;
+            ticker.g += texture2D(uText, vec2(u, band)).r;
+            ticker.b += texture2D(uText, vec2(fract(u - ca), band)).r;
           }
           // WHAT I DO: smaller than the name but no longer a whisper, running the other way
           // taller bands and fewer repeats around the wall: same tickers, noticeably bigger type
-          float band2 = (vUv.y - 0.750) / 0.185 + 0.5;
+          float band2 = (vu.y - 0.750) / 0.185 + 0.5;
           if (band2 > 0.0 && band2 < 1.0) {
             float u2 = fract(x * 0.92 - uT * 0.020);
-            ticker += texture2D(uRoles, vec2(u2, band2)).r * 0.8;
+            ticker += vec3(texture2D(uRoles, vec2(u2, band2)).r * 0.8);
           }
-          float band3 = (vUv.y - 0.255) / 0.165 + 0.5;
+          float band3 = (vu.y - 0.255) / 0.165 + 0.5;
           if (band3 > 0.0 && band3 < 1.0) {
             float u3 = fract(x * 1.05 + uT * 0.014);
-            ticker += texture2D(uRoles, vec2(u3, band3)).r * 0.68;
+            ticker += vec3(texture2D(uRoles, vec2(u3, band3)).r * 0.68);
           }
         }
         ticker *= (0.52 + 0.48 * bezel) * uTicker;        // the bezel eats the letters at panel edges
@@ -303,15 +342,34 @@ export function HeroRoom() {
         col *= depth;
 
         // LED sub-pixel scanlines, fine enough to read as panel structure rather than CRT
-        col *= 0.88 + 0.12 * sin(vUv.y * 1400.0);
+        col *= 0.88 + 0.12 * sin(vu.y * 1400.0);
 
         gl_FragColor = vec4(col, uFade);
       }`,
   }), [])
 
   const ref = useRef()
-  useFrame(({ clock, camera }) => {
+  const cur = useRef({ x: 0.5, y: 0.5, px: 0.5, py: 0.5, speed: 0 })
+  useFrame(({ clock, camera, gl }) => {
     mat.uniforms.uT.value = clock.elapsedTime
+
+    /* THE POINTER, SMOOTHED. Rig writes the raw position in NDC; this lerps toward it so the
+       ripple trails the cursor slightly instead of being nailed to it, and derives a speed from
+       the frame-to-frame delta. Speed builds fast and decays slowly — the same asymmetry the jump
+       uses — so a flick registers immediately and the wall settles afterwards rather than
+       stopping dead. It all shuts off with act zero: this is the front door's trick, not the
+       journey's. */
+    const c = cur.current
+    c.px = c.x; c.py = c.y
+    c.x += (scroll.mouse.x * 0.5 + 0.5 - c.x) * 0.1
+    c.y += (scroll.mouse.y * 0.5 + 0.5 - c.y) * 0.1
+    const v = Math.min(1, Math.hypot(c.x - c.px, c.y - c.py) * 26)
+    c.speed += (v - c.speed) * (v > c.speed ? 0.4 : 0.045)
+    mat.uniforms.uMouse.value.set(c.x, c.y)
+    mat.uniforms.uPrevMouse.value.set(c.px, c.py)
+    mat.uniforms.uMouseSpeed.value = c.speed * (1 - scroll.heroOut)
+    // device pixels, because gl_FragCoord is in device pixels
+    mat.uniforms.uRes.value.set(gl.domElement.width, gl.domElement.height)
     // Dims out as act one takes over, and then LEAVES. At a residual 2% the ticker was still
     // legible through the planting three acts later. It does NOT come back for the title beat:
     // bringing the wall up again there made the handover read as a loop rather than a journey.

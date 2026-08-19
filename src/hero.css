@@ -102,6 +102,18 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
 .cs-phone:hover{color:#fff;border-color:rgba(150,190,255,.6)}
 .cs-phone[data-copied="1"]{color:#7ee8a2;border-color:rgba(126,232,162,.6)}
 
+/* THE COPY WAITS FOR THE TRICK. The stage itself is up while the frame is still breaking apart —
+   it has to be, it is the black behind the blocks — but nothing written on it appears until the
+   handset has opened. The kicker's neon loop is held off with a delay rather than fought with,
+   because a running animation owns opacity and would beat any transition here. */
+.contactstage .cs-kicker,.contactstage .cs-phone,.contactstage .cs-list{
+  opacity:0;transition:opacity .7s ease}
+.contactstage .cs-kicker{animation:none}
+.contactstage[data-reveal="1"] .cs-kicker,
+.contactstage[data-reveal="1"] .cs-phone,
+.contactstage[data-reveal="1"] .cs-list{opacity:1}
+.contactstage[data-reveal="1"] .cs-kicker{animation:neon 3.6s ease-in-out .8s infinite}
+
 /* callouts — positioned by transform from the projected icon position, so they follow the phone */
 .cs-call{position:absolute;top:0;left:0;z-index:3;text-decoration:none;color:#f2f6ff;
   opacity:0;transition:opacity .45s ease;white-space:nowrap;padding:.2rem 0}

@@ -14,9 +14,19 @@ import { budget } from './device'
    both bookends.
    ============================================================ */
 
-// more points to go with the denser planting — each plant still gets roughly the same budget,
-// scaled down on phones and tablets where a quarter of a million points is not a fair ask
-const N = Math.round(232000 * budget)
+// more points to go with the denser planting — scaled down on phones and tablets, where a third
+// of a million points is not a fair ask
+const N = Math.round(300000 * budget)
+
+/* THE SPECIES. Four was a planting; nine is a garden. The point of the extra five is not variety
+   for its own sake — it is SILHOUETTE. A bed of domes and blobs reads as topiary however many of
+   them you add; what makes a garden look composed is the arching frond against the vertical
+   spire against the flat spread of a fan. */
+const TREE = 0, MUSHROOM = 1, TENDRIL = 2, BUSH = 3
+const FERN = 4, GRASS = 5, FAN = 6, SPIRE = 7, BLOSSOM = 8
+// roughly how much of the frame each one occupies, used to hand out points — a sapling and a full
+// tree drawing the same number of points is what made the big planting look thin
+const MASS = { 0: 3.0, 1: 0.7, 2: 1.1, 3: 1.0, 4: 1.6, 5: 0.9, 6: 2.2, 7: 1.2, 8: 1.8 }
 
 function rnd(a, b) { return a + Math.random() * (b - a) }
 
@@ -45,31 +55,66 @@ export default function Garden() {
 
     const tmp = new THREE.Color()
 
-    // ---- build a list of plants scattered in a hollow cylinder around the helix
-    // 120 -> 230, and the belt pushed wider: at the closer camera the planting had visible gaps
-    // you could see straight through, which made it read as scenery rather than as a place.
+    /* ---- build the planting: GROVES, not a scatter.
+       A uniform sprinkle over a cylinder is what a random number generator does, and it looks
+       like it: evenly spaced, evenly boring, gaps you can see straight through in every
+       direction. Real planting comes in stands — a cluster of the same few species with clear
+       ground between one stand and the next — and that grouping is most of the difference
+       between scenery and somewhere you would pay to walk through.
+
+       So: two dozen grove centres around the column, each with its OWN palette of two or three
+       species, and every plant placed near a centre with a soft falloff. A tenth are left as
+       strays to keep the edges from reading as circles. */
     const plants = []
-    for (let i = 0; i < Math.round(230 * (0.55 + budget * 0.45)); i++) {
+    const COUNT = Math.round(430 * (0.55 + budget * 0.45))
+    const GROVES = 24
+    const groves = Array.from({ length: GROVES }, () => {
       const a = Math.random() * Math.PI * 2
       const rad = rnd(8.5, 30)
+      // each grove is a stand of two or three species, drawn from the full set
+      const set = [TREE, MUSHROOM, TENDRIL, BUSH, FERN, GRASS, FAN, SPIRE, BLOSSOM]
+      const n = 2 + ((Math.random() * 2) | 0)
+      const mix = Array.from({ length: n }, () => set[(Math.random() * set.length) | 0])
+      return { x: Math.cos(a) * rad, z: Math.sin(a) * rad, y: rnd(-46, 46), mix, spread: rnd(3.5, 9) }
+    })
+    for (let i = 0; i < COUNT; i++) {
+      const stray = Math.random() < 0.1
+      const g0 = groves[(Math.random() * GROVES) | 0]
+      const a = Math.random() * Math.PI * 2
+      const off = Math.pow(Math.random(), 0.6) * g0.spread
+      const rad = stray ? rnd(8.5, 30) : 0
+      const sa = Math.random() * Math.PI * 2
+      const kind = stray
+        ? [TREE, BUSH, FERN, GRASS, TENDRIL][(Math.random() * 5) | 0]
+        : g0.mix[(Math.random() * g0.mix.length) | 0]
+      const scale = rnd(0.7, 1.9) * (kind === FAN || kind === TREE ? 1.15 : 1)
       plants.push({
-        x: Math.cos(a) * rad,
-        z: Math.sin(a) * rad,
-        y: rnd(-46, 46),
-        // 0 tree · 1 mushroom · 2 hanging tendril · 3 low bush
-        kind: (() => { const r = Math.random()
-          if (r < 0.20) return 0        // tree
-          if (r < 0.32) return 1        // mushroom
-          if (r < 0.46) return 2        // hanging tendril
-          return 3                      // low bush (real 3D blossoms handle the flowers now)
-        })(),
-        scale: rnd(0.7, 1.9),
+        x: stray ? Math.cos(sa) * rad : g0.x + Math.cos(a) * off,
+        z: stray ? Math.sin(sa) * rad : g0.z + Math.sin(a) * off,
+        y: stray ? rnd(-46, 46) : g0.y + rnd(-7, 7),
+        kind,
+        scale,
+        rot: Math.random() * Math.PI * 2,     // which way this one faces
+        flower: kind === BLOSSOM || kind === SPIRE,
+        weight: MASS[kind] * scale * scale,
       })
+    }
+
+    // POINTS GO WHERE THE MASS IS: a cumulative table, picked by binary search, so a full tree
+    // gets its share and a mushroom gets a mushroom's share.
+    const cum = new Float32Array(plants.length)
+    let acc = 0
+    for (let k = 0; k < plants.length; k++) { acc += plants[k].weight; cum[k] = acc }
+    const pickPlant = () => {
+      const r = Math.random() * acc
+      let lo = 0, hi = plants.length - 1
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (cum[mid] < r) lo = mid + 1; else hi = mid }
+      return plants[lo]
     }
 
     let i = 0
     while (i < N) {
-      const p = plants[(Math.random() * plants.length) | 0]
+      const p = pickPlant()
       const s = p.scale
       let x, y, z
 
@@ -118,6 +163,46 @@ export default function Garden() {
         x = p.x + Math.cos(u) * r
         y = p.y + rnd(0, 0.9) * s
         z = p.z + Math.sin(u) * r
+      } else if (p.kind === 4) {
+        // FERN: a frond that climbs, arches over and falls away, with leaflets stepping out
+        // either side of the rachis and shortening toward the tip
+        const t = Math.pow(Math.random(), 0.85)
+        const cos = Math.cos(p.rot), sin = Math.sin(p.rot)
+        const along = t * 3.4 * s
+        const leaf = (Math.random() - 0.5) * (1 - t * 0.72) * 2.2 * s
+        x = p.x + cos * along - sin * leaf
+        z = p.z + sin * along + cos * leaf
+        y = p.y + Math.sin(t * 1.75) * 3.4 * s - Math.abs(leaf) * 0.18
+      } else if (p.kind === 5) {
+        // GRASS: a clump of blades, each leaning out on its own bearing
+        const blade = (Math.random() * 11) | 0
+        const ba = p.rot + blade * 0.63
+        const t = Math.pow(Math.random(), 0.8)
+        const lean = t * t * 1.3 * s
+        x = p.x + Math.cos(ba) * (0.12 + lean) + rnd(-0.06, 0.06)
+        y = p.y + t * 3.6 * s
+        z = p.z + Math.sin(ba) * (0.12 + lean) + rnd(-0.06, 0.06)
+      } else if (p.kind === 6) {
+        // FAN: broad leaves radiating from a low crown, each dipping under its own weight —
+        // this is the one that gives the garden its horizontal lines
+        const LEAVES = 7
+        const li = (Math.random() * LEAVES) | 0
+        const la = p.rot + (li / LEAVES) * Math.PI * 2
+        const t = Math.pow(Math.random(), 0.62)
+        const half = Math.sin(t * Math.PI) * 0.9 * s
+        const w = (Math.random() - 0.5) * 2 * half
+        const reach = t * 4.4 * s
+        x = p.x + Math.cos(la) * reach - Math.sin(la) * w
+        z = p.z + Math.sin(la) * reach + Math.cos(la) * w
+        y = p.y + 1.3 * s + Math.sin(t * 2.1) * 1.5 * s - t * t * 1.7 * s
+      } else if (p.kind === 7) {
+        // SPIRE: a flowering stalk, dense at the base of the head and tapering to a point
+        const t = Math.pow(Math.random(), 0.75)
+        const u = Math.random() * Math.PI * 2
+        const r = Math.pow(Math.random(), 0.5) * 0.85 * (1 - t * 0.8) * s
+        x = p.x + Math.cos(u) * r
+        y = p.y + t * 6.8 * s
+        z = p.z + Math.sin(u) * r
       } else {
         // BLOSSOM: a slim trunk carrying several dense clustered flower heads
         if (Math.random() < 0.13) {
@@ -153,7 +238,7 @@ export default function Garden() {
       start[i * 3 + 1] = 10 - k * 26
       start[i * 3 + 2] = Math.sin(ha) * hr
 
-      const isBloom = p.kind === 4
+      const isBloom = p.flower
       const hex = isBloom ? pickWeighted(BLOOM_PAL, BLOOM_W) : pickWeighted(PAL, WEIGHT)
       tmp.set(hex).multiplyScalar(rnd(isBloom ? 0.7 : 0.55, isBloom ? 1.35 : 1.15))
       col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b
@@ -230,7 +315,7 @@ export default function Garden() {
         // 17 -> 9. THE SINGLE BIGGEST COST IN THE SCENE: a quarter of a million additive points
         // at up to 17*dpr pixels across is many screens' worth of overdraw every frame, and the
         // blend means none of it can be depth-rejected. Halving the cap quarters the fill.
-        gl_PointSize = min(aSize * uPix * (125.0 / max(depth, 0.001)), 9.0 * uPix);
+        gl_PointSize = min(aSize * uPix * (132.0 / max(depth, 0.001)), 11.0 * uPix);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
@@ -245,8 +330,10 @@ export default function Garden() {
         float core = smoothstep(0.30, 0.04, len);
         float halo = smoothstep(0.5, 0.0, len);
         float a = core * 0.85 + halo * halo * 0.4;
-        // down to a quarter in the garden — at full strength this confetti buries the marble
-        gl_FragColor = vec4(vC * uTint, a * vA * 0.95 * (1.0 - uAct3 * 0.76) * uIn * uSpace);
+        /* It used to fall to a quarter in act three, back when a marble bust was the subject
+           and this was confetti in front of it. There is no bust any more — the PLANTING is what
+           act three is — so it now holds almost all of its strength right to the end. */
+        gl_FragColor = vec4(vC * uTint, a * vA * 0.95 * (1.0 - uAct3 * 0.12) * uIn * uSpace);
       }`,
   }), [])
 

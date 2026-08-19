@@ -114,7 +114,7 @@ function Phone({ anchors }) {
       drag.current.px = e.clientX; drag.current.py = e.clientY
     }
     const down = e => {
-      if (scroll.contact < 0.5) return
+      if (scroll.reveal < 0.5) return
       drag.current.on = true
       drag.current.px = e.clientX; drag.current.py = e.clientY
       document.body.style.cursor = 'grabbing'
@@ -134,7 +134,6 @@ function Phone({ anchors }) {
   }, [])
 
   useFrame(({ clock }, dt) => {
-    const c = scroll.contact
     const t = clock.elapsedTime
     const step = Math.min(dt, 0.05)
 
@@ -151,12 +150,20 @@ function Phone({ anchors }) {
       rig.current.rotation.y += vel.current.y
       rig.current.rotation.x += vel.current.x
       rig.current.rotation.z = Math.sin(t * 0.2) * 0.02
-      // rises into frame as the last stretch of scroll plays
-      rig.current.position.y = -0.5 + c * 0.5 + Math.sin(t * 0.5) * 0.03
+      /* THE TRICK. The handset does not fade in — fading in is how a picture arrives, not how a
+         thing appears. It opens: a seam of light stretches to full height first, then swings out
+         to full width, and the flash behind it peaks at the moment it takes shape. Nothing of it
+         exists before `reveal`, and `reveal` does not start until the frame has finished turning
+         to black. */
+      const r = scroll.reveal
+      const sy = THREE.MathUtils.smoothstep(r, 0.0, 0.44)
+      const sx = THREE.MathUtils.smoothstep(r, 0.28, 0.86)
+      rig.current.position.y = -0.5 + r * 0.5 + Math.sin(t * 0.5) * 0.03
       // on a narrow frame the handset is shrunk rather than the camera pulled back — pulling back
       // would shrink the dust and the room with it and the scene would read as a doll's house
-      rig.current.scale.setScalar((0.86 + c * 0.14) / fitZ(size.width / size.height))
-      rig.current.visible = c > 0.004
+      const base = (0.86 + r * 0.14) / fitZ(size.width / size.height)
+      rig.current.scale.set(base * (0.015 + 0.985 * sx), base * (0.05 + 0.95 * sy), base)
+      rig.current.visible = r > 0.002
     }
 
     // ONE APP PER BEAT. Each icon gets its own slice of the closing scroll, so they land in
@@ -282,11 +289,74 @@ function Dust() {
 
   useFrame(({ clock }) => {
     mat.uniforms.uT.value = clock.elapsedTime
-    mat.uniforms.uIn.value = scroll.contact
-    if (ref.current) ref.current.visible = scroll.contact > 0.01
+    // a little of it is already drifting in the black before anything appears, which is what
+    // makes the empty screen read as a place rather than as a gap
+    mat.uniforms.uIn.value = Math.max(scroll.reveal, scroll.contact * 0.22)
+    if (ref.current) ref.current.visible = mat.uniforms.uIn.value > 0.01
   })
 
   return <points ref={ref} geometry={geo} material={mat} frustumCulled={false} />
+}
+
+/* THE SEAM AND THE FLASH — the two lights the handset comes out of.
+   One soft disc, stretched tall and thin, is the seam: it opens with the phone and dies as the
+   phone takes over. The same disc, round and short-lived, is the flash at the moment of the
+   reveal. Both additive, both behind the handset, both fed by the same progress value, so the
+   light and the object are one event rather than two things that happen near each other. */
+function Reveal() {
+  const seam = useRef(), flash = useRef()
+  const map = useMemo(() => {
+    const S = 128
+    const c = document.createElement('canvas')
+    c.width = c.height = S
+    const g = c.getContext('2d')
+    const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+    grd.addColorStop(0.0, 'rgba(255,255,255,1)')
+    grd.addColorStop(0.25, 'rgba(226,240,255,0.75)')
+    grd.addColorStop(1.0, 'rgba(140,190,255,0)')
+    g.fillStyle = grd
+    g.fillRect(0, 0, S, S)
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    return t
+  }, [])
+
+  useFrame(() => {
+    const r = scroll.reveal
+    const open = THREE.MathUtils.smoothstep(r, 0.0, 0.44)
+    const s = seam.current, f = flash.current
+    if (s) {
+      s.visible = r > 0.002 && r < 0.98
+      if (s.visible) {
+        s.scale.set(0.35 + open * 0.9, 0.5 + open * 4.6, 1)
+        s.material.opacity = Math.min(1, open * 1.7) * (1 - THREE.MathUtils.smoothstep(r, 0.5, 0.95))
+      }
+    }
+    if (f) {
+      // a single beat, centred on the moment the shape finishes opening
+      const v = Math.exp(-Math.pow((r - 0.46) / 0.15, 2))
+      f.visible = v > 0.01
+      if (f.visible) {
+        f.scale.setScalar(1.6 + v * 6.0)
+        f.material.opacity = v * 0.8
+      }
+    }
+  })
+
+  return (
+    <group position={[0, 0, -0.9]}>
+      <mesh ref={flash} renderOrder={-1}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial map={map} transparent opacity={0} depthWrite={false} depthTest={false}
+          blending={THREE.AdditiveBlending} toneMapped={false} />
+      </mesh>
+      <mesh ref={seam} renderOrder={-1}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial map={map} transparent opacity={0} depthWrite={false} depthTest={false}
+          blending={THREE.AdditiveBlending} toneMapped={false} />
+      </mesh>
+    </group>
+  )
 }
 
 export default function ContactStage() {
@@ -353,7 +423,10 @@ export default function ContactStage() {
         const v = scroll.contact
         el.style.opacity = v.toFixed(3)
         el.style.visibility = v > 0.004 ? 'visible' : 'hidden'
-        el.style.pointerEvents = v > 0.6 ? 'auto' : 'none'
+        el.style.pointerEvents = scroll.reveal > 0.6 ? 'auto' : 'none'
+        // the copy — kicker, number, phone-only list — belongs to the reveal, not to the black
+        // screen that precedes it. CSS does the fading; this only says which beat we are in.
+        el.dataset.reveal = scroll.reveal > 0.32 ? '1' : '0'
         // flips at the threshold only, so this isn't a setState every frame
         setLive(prev => (prev === v > 0.004 ? prev : v > 0.004))
       }
@@ -380,6 +453,7 @@ export default function ContactStage() {
           <Lightformer form="rect" intensity={1.6} position={[5, 0, 3]} scale={[2, 7, 1]} color="#9ec2ff" />
         </Environment>
         <Dust />
+        <Reveal />
         <Phone anchors={anchors} />
         {/* the handset earns a highlight pass: its edge, the app icons and the dust are all
             small bright things on black, which is exactly what bloom is for */}
