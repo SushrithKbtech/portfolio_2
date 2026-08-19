@@ -73,16 +73,6 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
 .hud b{font-weight:400;opacity:.6;margin-right:14px}
 .hud i{font-style:normal}
 
-/* THE CHAPTER CARD — Anton, white, tracked wide. Smaller than it was: at 13vw it was competing
-   with the column behind it instead of labelling it. */
-.chapter{position:fixed;left:50%;top:50%;z-index:12;pointer-events:none;
-  /* Montserrat 900 rather than Anton: Anton is a CONDENSED face, so it can only ever look tall
-     and narrow. This is the fat one, and it is already self-hosted for the wordmark. */
-  font-family:"Montserrat",system-ui,sans-serif;font-weight:900;color:#fff;
-  font-size:clamp(1.8rem,6.6vw,5.6rem);line-height:.9;letter-spacing:.1em;text-transform:uppercase;
-  white-space:nowrap;visibility:hidden;opacity:0;transition:opacity .5s ease;
-  text-shadow:0 0 70px rgba(120,170,255,.5),0 0 24px rgba(255,255,255,.3),0 6px 50px rgba(0,0,0,.6)}
-
 .plinks{display:flex;gap:1.2rem;justify-content:flex-end;margin-top:1rem;
   font-size:.58rem;letter-spacing:.28em;text-transform:uppercase}
 .plinks a{opacity:.7;border-bottom:1px solid rgba(238,240,246,.3);padding-bottom:.25rem;

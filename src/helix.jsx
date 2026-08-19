@@ -16,6 +16,7 @@ import { useSafeTexture, posterTexture } from './procAssets'
 import ContactStage from './contact.jsx'
 import { fitZ, dpr as DPR } from './device'
 import Intro from './intro.jsx'
+import Hyperspace from './hyperspace.jsx'
 
 /* THE JOURNEY, in four beats down one scroll:
      0.00 → 0.12   act zero  · the glass SK in the LED room, the name behind it
@@ -28,8 +29,10 @@ import Intro from './intro.jsx'
 const R = 7.7, PITCH = 3.15, ANGLE_SPAN = 1.42, FOCUS = 0.85, TILT = 0.19
 // START pushed out by a hero's worth of runway, so card 01 arrives after act zero has handed over
 // rather than during it. The card CADENCE is untouched: same slots, same rate per pixel.
-// 0.55 -> 0.95: the title beat needs room of its own between the column dive and card 01
-const HERO_SLOTS = 0.95
+/* 0.95 -> 1.75. The jump, the burst and the column's assembly all happen before the gallery, and
+   the title panel needs a clear slot of its own after them — at the old value it swung through
+   the frame while the streaks were still flying. */
+const HERO_SLOTS = 1.75
 const START = 1.25 + HERO_SLOTS
 const CARD_SLOTS = SYSTEMS.length + START - 0.4
 const FINALE_SLOTS = 3.05
@@ -63,6 +66,58 @@ if (typeof window !== 'undefined') {
   const kick = () => PENDING.forEach(v => v.play().then(() => v.pause()).catch(() => {}))
   window.addEventListener('pointerdown', kick, { once: true })
   window.addEventListener('wheel', kick, { once: true, passive: true })
+}
+
+/* THE TITLE, ON THE SAME TRACK AS THE WORK.
+   It used to be a DOM card pinned to the middle of the screen, which meant the one element
+   announcing the gallery was the one element not in the gallery's space. This rides the identical
+   helix the panels ride — same radius, same pitch, same easing — a slot and a half ahead of the
+   first project, so it swings round the column, squares up to you, and carries on down as card 01
+   comes up behind it. Nothing new to learn: it IS a card, it just says what the next ones are. */
+function TitlePanel() {
+  const grp = useRef()
+  const SLOT = START - 0.9   // one beat ahead of card 01, once the column has finished assembling
+  const map = useMemo(() => {
+    const W = 1600, H = 420
+    const c = document.createElement('canvas')
+    c.width = W; c.height = H
+    const g = c.getContext('2d')
+    g.clearRect(0, 0, W, H)
+    g.textAlign = 'center'; g.textBaseline = 'middle'
+    g.letterSpacing = '0.1em'
+    g.font = '900 210px Montserrat, system-ui, sans-serif'
+    g.fillStyle = '#ffffff'
+    g.fillText('PROJECTS', W / 2, H / 2)
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 8
+    return t
+  }, [])
+
+  useFrame(({ clock }) => {
+    const g = grp.current; if (!g) return
+    const t = scroll.p * TOTAL_SLOTS - SLOT
+    const angle = t * ANGLE_SPAN
+    g.position.set(Math.sin(angle) * R, t * PITCH, Math.cos(angle) * R)
+    const w = 1 - THREE.MathUtils.clamp(Math.abs(t) / FOCUS, 0, 1)
+    const ease = w * w * (3 - 2 * w)
+    g.rotation.y = angle * (1 - ease)
+    g.rotation.z = -t * TILT * (1 - ease * 0.55) + Math.sin(clock.elapsedTime * 0.5) * 0.012
+    g.rotation.x = t * 0.055 * (1 - ease)
+    const near = Math.max(0, 1 - Math.abs(t) / 2.4)
+    g.scale.setScalar((0.78 + near * near * 0.3) * 0.72 * scroll.bloom)
+    g.visible = Math.abs(t) < 3.1 && scroll.bloom > 0.05 && scroll.fin < 0.5
+  })
+
+  return (
+    <group ref={grp}>
+      <mesh renderOrder={2}>
+        <planeGeometry args={[7.4, 1.94]} />
+        <meshBasicMaterial map={map} transparent toneMapped={false} side={THREE.DoubleSide}
+          depthWrite={false} />
+      </mesh>
+    </group>
+  )
 }
 
 /* ---------- ONE PROJECT PANEL ---------- */
@@ -190,18 +245,31 @@ function Rig() {
     window.addEventListener('pointermove', h); return () => window.removeEventListener('pointermove', h)
   }, [])
   useFrame(() => {
+    /* THE JUMP IS YOUR SCROLL. `speed` is the gap still to be closed between where the page is and
+       where you have asked it to be — big while you are actively scrolling, zero the moment you
+       stop. Eased asymmetrically: it builds fast so a flick registers immediately, and decays
+       slowly so the streaks trail off rather than snapping to points. */
+    const gap = Math.min(1, Math.abs(scroll.target - scroll.p) * 26)
+    scroll.speed += (gap - scroll.speed) * (gap > scroll.speed ? 0.35 : 0.06)
     scroll.p += (scroll.target - scroll.p)*0.062
     const p = scroll.p
 
-    /* THE CUT IS COVERED. The whiteout peaks at 0.085 and act zero dies underneath it, so the
-       glass SK and the column are never both legible in the same frame. */
-    /* The whiteout is now a glow rather than a cover: at full strength it hid the convergence,
-       which is the transition worth watching. */
-    scroll.flash   = Math.exp(-Math.pow((p - 0.085) / 0.020, 2)) * 0.42
-    scroll.heroOut = THREE.MathUtils.smoothstep(p, 0.062, 0.092)
-    scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.078, 0.170)
+    /* THE JUMP, then the burst, then the bone. No cut anywhere in it:
+         0.000-0.030  the hero holds
+         0.030-0.100  you fly INTO the monogram and through the wall; streaks stretch out
+         0.090-0.125  the burst — the field detonates from a point out in open space
+         0.098-0.170  the swarm converges and the column assembles from it
+       Each window overlaps the next, so no beat ever finishes before its successor starts. */
+    scroll.warp    = THREE.MathUtils.smoothstep(p, 0.030, 0.100)
+    scroll.heroOut = THREE.MathUtils.smoothstep(p, 0.055, 0.098)
+    /* YOU GO THROUGH THE LIGHT. The beacon has been growing in front of you for the whole jump;
+       this is the instant you reach it. Full cover, but narrow — under a hundredth of the scroll
+       — so it reads as passing through rather than as a curtain. Everything of the next section
+       is already in place underneath by the time it clears. */
+    scroll.flash   = Math.exp(-Math.pow((p - 0.103) / 0.013, 2))
+    scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.088, 0.150)
     // the column's whole entrance sits under the flash, so you never watch it arrive
-    scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.074, 0.094)
+    scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.095, 0.145)
     scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.97)
     /* THE CLOSE. It starts the moment the last project has gone past rather than in the final few
        percent: the garden dissolves to black from 0.76, the phone is up by 0.90, and the apps land
@@ -256,6 +324,7 @@ function Scene({ onFocus }) {
 
       {/* act zero */}
       <HeroRoom />
+      <Hyperspace />
       <Suspense fallback={null}><SKObject /></Suspense>
 
       {/* the world it opens into */}
@@ -266,6 +335,7 @@ function Scene({ onFocus }) {
       <BoneSpine />
       <Blossoms />
       <Suspense fallback={null}><Finale /></Suspense>
+      <TitlePanel />
       {SYSTEMS.map((s,i) => <Card key={s.id} sys={s} i={i} onFocus={onFocus} />)}
 
       {/* TWO PASSES, NOT SIX. The old stack had bloom, chromatic aberration, scanline, noise and
@@ -305,32 +375,6 @@ function Whiteout() {
 }
 
 
-/* The chapter card. Its own rAF rather than React state: at 60fps a setState per frame would
-   re-render the whole page for one opacity value. */
-function ChapterTitle() {
-  const ref = useRef()
-  useEffect(() => {
-    let raf
-    const tick = () => {
-      const el = ref.current
-      if (el) {
-        const p = scroll.p
-        const v = Math.min(
-          THREE.MathUtils.smoothstep(p, 0.098, 0.120),
-          1 - THREE.MathUtils.smoothstep(p, 0.150, 0.170),
-        )
-        el.style.opacity = v.toFixed(3)
-        el.style.visibility = v > 0.01 ? 'visible' : 'hidden'
-        el.style.transform = `translate(-50%,-50%) scale(${(1.05 - v * 0.05).toFixed(4)})`
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [])
-  return <div className="chapter" ref={ref}>Projects</div>
-}
-
 const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight
 
 const CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/#%'
@@ -360,7 +404,7 @@ export default function Helix() {
     const forced = parseFloat(new URLSearchParams(location.search).get('s'))
     if (!Number.isNaN(forced)) {
       scroll.target = forced; scroll.p = forced
-      setGone(forced > 0.06); setInWork(forced > 0.20 && forced < FIN_FROM + 0.03)
+      setGone(forced > 0.06); setInWork(forced > 0.21 && forced < FIN_FROM + 0.03)
       return
     }
     const lenis = new Lenis({ duration: 1.5, smoothWheel: true, wheelMultiplier: 0.85 })
@@ -368,7 +412,7 @@ export default function Helix() {
     lenis.on('scroll', ({ progress }) => {
       scroll.target = progress
       setGone(progress > 0.06)
-      setInWork(progress > 0.20 && progress < FIN_FROM + 0.03)
+      setInWork(progress > 0.21 && progress < FIN_FROM + 0.03)
     })
     let raf; const loop = t => { lenis.raf(t); raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop)
@@ -402,7 +446,6 @@ export default function Helix() {
       {intro && <Intro onDone={() => setIntro(false)} />}
 
       <Whiteout />
-      <ChapterTitle />
       <ContactStage />
 
       {/* act zero's chrome — the ghost triangles and the cool perimeter go with the room */}

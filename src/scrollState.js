@@ -15,6 +15,12 @@ export const scroll = {
   // Act zero: the LED room, the name and the glass SK. 0 = the front door as you land on it,
   // 1 = fully handed over to the journey.
   heroOut: 0,
+  // The jump: 0 = the hero sitting still, 1 = the wall and the monogram have flown past the lens
+  // and you are out in open space with the streaks at full stretch.
+  warp: 0,
+  // How hard you are scrolling right now, 0..1, eased. The jump reads this: streaks stretch with
+  // your input and collapse back to points the moment you stop.
+  speed: 0,
   // The whiteout that covers the cut from act zero to the column. Read by a DOM overlay, not by
   // anything in the scene — it has to sit over the canvas, the nav and everything else.
   flash: 0,

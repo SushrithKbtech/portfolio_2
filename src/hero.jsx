@@ -306,7 +306,13 @@ export function HeroRoom() {
     // bringing the wall up again there made the handover read as a loop rather than a journey.
     const on = 1 - scroll.heroOut
     mat.uniforms.uFade.value = on
-    if (ref.current) ref.current.visible = on > 0.005
+    if (ref.current) {
+      /* THE WALL COMES AT YOU. During the jump it rushes forward and passes the lens — the
+         panels swell, slide off every edge and are gone behind you. Nothing fades out here;
+         it leaves through the viewer, which is why no cut is needed on the far side. */
+      ref.current.position.z = -3 + scroll.warp * 34
+      ref.current.visible = on > 0.005 && scroll.warp < 0.995
+    }
   })
 
   return (
@@ -460,11 +466,14 @@ function Glass({ geometry }) {
     o.rotation.x = xFree
     o.rotation.z = Math.sin(t * 0.13) * 0.04
 
-    // act zero's object: it shrinks away under the whiteout as the journey begins
-    const out = scroll.heroOut
-    o.scale.setScalar(2.45 * (1 - out * 0.92))
+    /* THE MONOGRAM IS THE DOOR. You fly INTO it: it rushes the lens, swelling as it comes, and
+       passes either side of you. It does not shrink and it does not fade — going through it is
+       the transition. */
+    const w = scroll.warp
+    o.position.z = 1.6 + w * w * 15.0
+    o.scale.setScalar(2.45 * (1 + w * 1.5))
     if (mat.current) mat.current.opacity = 1
-    o.visible = out < 0.985
+    o.visible = w < 0.92
   })
 
   return (
