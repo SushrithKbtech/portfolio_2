@@ -49,9 +49,12 @@ void mainUv(inout vec2 uv) {
   float p = uProgress;
   if (p <= 0.001 || p >= 0.999) return;
 
-  // in to the grid and back out of it — 0 at both ends, 1 at the midpoint
-  float q = 1.0 - abs(p * 2.0 - 1.0);
-  q = q * q * (3.0 - 2.0 * q);
+  /* THE BLOCKS ARRIVE FIRST, AND STAY. On a symmetric in-and-out the image was still growing
+     its blocks while they were already turning black, so the two moves cancelled each other and
+     the whole thing read as one instant of noise. Now the grid is fully formed by a third of the
+     way in and holds through the flipping — you see the picture become blocks, then you see the
+     blocks go. */
+  float q = smoothstep(0.0, 0.30, p) * (1.0 - smoothstep(0.72, 1.0, p));
 
   // the grid coarsens from one cell per pixel down to uGridSize
   vec2 g = mix(resolution, grid(), q);
@@ -64,7 +67,9 @@ void mainUv(inout vec2 uv) {
   float slot = floor(time * 9.0);
   float pick = step(0.62, hash12(vec2(cell.y * 1.7, slot + 3.0)));
   float jump = (hash12(vec2(cell.y, slot)) - 0.5) * pick;
-  quv.x += (sin(quv.y * 22.0 + time * 2.2) * 0.016 + jump * 0.075) * q * q;
+  // and the tearing is its own beat, between the blocks forming and the blocks leaving
+  float tear = smoothstep(0.12, 0.42, p) * (1.0 - smoothstep(0.62, 0.88, p));
+  quv.x += (sin(quv.y * 22.0 + time * 2.2) * 0.016 + jump * 0.075) * tear;
 
   uv = mix(uv, quv, q);
 }
@@ -80,11 +85,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   // front of it is ragged. Every block gets the same 0.30-wide crossing, just at its own time.
   float diag = (cell.x / g.x + (1.0 - (cell.y + 0.5) / g.y)) * 0.5;
   float jit = hash12(cell + 11.0) * 0.22;
-  float flip = smoothstep(0.0, 1.0, (p * 1.55 - 0.16 - diag * 0.62 - jit) / 0.30);
+  // held off until the grid has formed — the first block turns around 0.21 and the last one is
+  // done by 0.92, so the wave has the whole middle of the beat to cross the frame
+  float flip = smoothstep(0.0, 1.0, (p * 1.45 - 0.30 - diag * 0.55 - jit) / 0.26);
 
   // CHROMATIC SPLIT, peaking with the shift and gone by both ends
-  float q = 1.0 - abs(p * 2.0 - 1.0);
-  float ca = q * 0.0045;
+  float ca = smoothstep(0.1, 0.4, p) * (1.0 - smoothstep(0.6, 0.9, p)) * 0.0045;
   vec3 col = vec3(
     texture2D(inputBuffer, uv + vec2(ca, 0.0)).r,
     inputColor.g,

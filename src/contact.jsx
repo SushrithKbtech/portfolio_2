@@ -156,8 +156,10 @@ function Phone({ anchors }) {
          exists before `reveal`, and `reveal` does not start until the frame has finished turning
          to black. */
       const r = scroll.reveal
-      const sy = THREE.MathUtils.smoothstep(r, 0.0, 0.44)
-      const sx = THREE.MathUtils.smoothstep(r, 0.28, 0.86)
+      // height first, then width, with a clear beat between them — overlapped any harder the two
+      // moves read as one scale-up, which is a thing appearing rather than a thing opening
+      const sy = THREE.MathUtils.smoothstep(r, 0.0, 0.38)
+      const sx = THREE.MathUtils.smoothstep(r, 0.34, 0.82)
       rig.current.position.y = -0.5 + r * 0.5 + Math.sin(t * 0.5) * 0.03
       // on a narrow frame the handset is shrunk rather than the camera pulled back — pulling back
       // would shrink the dust and the room with it and the scene would read as a doll's house
@@ -334,7 +336,7 @@ function Reveal() {
     }
     if (f) {
       // a single beat, centred on the moment the shape finishes opening
-      const v = Math.exp(-Math.pow((r - 0.46) / 0.15, 2))
+      const v = Math.exp(-Math.pow((r - 0.52) / 0.17, 2))
       f.visible = v > 0.01
       if (f.visible) {
         // tighter and softer than it was: at full strength the flare washed the entire frame to

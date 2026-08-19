@@ -14,11 +14,11 @@ body{background:var(--ink);color:var(--paper);font-family:var(--mono);overflow-x
 ::selection{background:var(--hot);color:#000}
 
 canvas.gl{position:fixed!important;inset:0;width:100vw!important;height:100vh!important;z-index:0}
-/* 900 -> 1300 -> 1500 -> 1650vh: act three added 3.05 slots on top of the card slots, act zero
-   added 1.4 more at the front, and the jump was then given room to last two to three seconds
-   instead of an instant. The runway grows by the same ratio each time, so the cards keep moving at
-   exactly the same rate per pixel scrolled. */
-.runway{position:relative;z-index:1;height:1650vh;pointer-events:none}
+/* 900 -> 1300 -> 1500 -> 1650 -> 1900vh: act three added slots on top of the card slots, act zero
+   added more at the front, the jump was given room to last two to three seconds instead of an
+   instant, and the close was given room to be a sequence rather than a switch. The runway grows by
+   the same ratio each time, so the cards keep moving at exactly the same rate per pixel scrolled. */
+.runway{position:relative;z-index:1;height:1900vh;pointer-events:none}
 
 .vig{position:fixed;inset:0;z-index:4;pointer-events:none;
   background:radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(4,5,10,.92) 100%)}
