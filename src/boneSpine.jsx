@@ -131,8 +131,14 @@ function Swarm({ geometry, height }) {
    pulses in unison — at any instant some are new and tight to the surface while others are far
    out and nearly gone, which is what reads as continuous shedding rather than an explosion.
 
-   They are round sprites, not spheres: at this size a lit sphere costs a draw call each and looks
-   identical to a soft disc, and additive discs blend into the bokeh the reference has. */
+   THEY ARE GLASS. Still one draw call for the lot — they are sprites, not geometry — but each one
+   is SHADED as a sphere: the surface normal is recovered from the point coordinate, so every bead
+   has a real curved face to catch the key light on, a specular hot spot that sits where the light
+   actually is, a fresnel rim that brightens toward the edge the way glass does, and a second
+   softer highlight coming back through its far wall so it reads as hollow rather than as a marble.
+   The rim colour is thin-film interference, shifted per bead, which is where the oil-slick comes
+   from. Blended normally rather than additively: additive discs are LIGHT, and these have to be
+   OBJECTS you could pick up. */
 function Shed({ height }) {
   const ref = useRef()
   const N = Math.round(2600 * budget)
@@ -164,7 +170,7 @@ function Shed({ height }) {
       pos[i * 3 + 1] = k.y + (Math.random() - 0.5) * spread * 2.4
       pos[i * 3 + 2] = Math.sin(a) * r
       rnd[i] = Math.random()
-      siz[i] = 0.8 + Math.pow(Math.random(), 1.7) * 5.2     // a few big ones, most small
+      siz[i] = 1.1 + Math.pow(Math.random(), 1.7) * 7.0     // a few big ones, most small
       c.set(pal[(Math.random() * pal.length) | 0]).multiplyScalar(0.55 + Math.random() * 0.8)
       col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b
     }
@@ -177,14 +183,15 @@ function Shed({ height }) {
   }, [N, height])
 
   const mat = useMemo(() => new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true,
+    transparent: true, depthWrite: false, blending: THREE.NormalBlending, vertexColors: true,
     uniforms: { uT: { value: 0 }, uIn: { value: 0 }, uPix: { value: Math.min(window.devicePixelRatio, 2) } },
     vertexShader: `
       attribute float aRnd; attribute float aSize;
       uniform float uT, uPix;
-      varying vec3 vC; varying float vA;
+      varying vec3 vC; varying float vA; varying float vSeed;
       void main(){
         vC = color;
+        vSeed = aRnd;
         // life 0..1, each particle offset by its own seed
         float life = fract(uT * (0.055 + aRnd * 0.055) + aRnd);
         vec3 p = position;
@@ -195,20 +202,38 @@ function Shed({ height }) {
         float depth = -mv.z;
         // in fast, out slow: bright the instant it leaves the bone, then a long fade
         vA = smoothstep(0.0, 0.06, life) * (1.0 - smoothstep(0.25, 1.0, life));
-        gl_PointSize = min(aSize * uPix * (46.0 / max(depth, 0.001)) * (1.0 + life * 1.5), 26.0 * uPix);
+        gl_PointSize = min(aSize * uPix * (52.0 / max(depth, 0.001)) * (1.0 + life * 1.5), 34.0 * uPix);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
       uniform float uIn;
-      varying vec3 vC; varying float vA;
+      varying vec3 vC; varying float vA; varying float vSeed;
       void main(){
-        float d = length(gl_PointCoord - 0.5);
-        // out-of-focus spheres are brighter at the RIM than the middle — that ring is what makes
-        // a disc read as bokeh instead of as a blurred dot
-        float disc = smoothstep(0.5, 0.42, d);
-        float rim  = smoothstep(0.5, 0.34, d) - smoothstep(0.34, 0.2, d);
-        float a = disc * 0.5 + rim * 0.55 + smoothstep(0.5, 0.0, d) * 0.35;
-        gl_FragColor = vec4(vC, a * vA * 0.6 * uIn);
+        vec2 uv = gl_PointCoord * 2.0 - 1.0;
+        float r2 = dot(uv, uv);
+        if (r2 > 1.0) discard;
+        // THE SPRITE IS A SPHERE. Everything below hangs off this one line: the z of the normal is
+        // the height of the dome above the disc, so the flat quad gets a curved surface for free.
+        vec3 n = vec3(uv, sqrt(max(0.0, 1.0 - r2)));
+        vec3 L = normalize(vec3(-0.45, 0.72, 0.55));
+
+        /* Glass is clear where you look straight through it and bright where you look ALONG it.
+           The exponent is what decides whether this is a bubble or a wire ring: at 3.0 the bright
+           band was pinned to the last few pixels of the silhouette and the beads read as hoops,
+           so it comes down to 1.8 and the brightness climbs across the whole outer half. */
+        float fres = pow(1.0 - n.z, 1.8);
+        float refl = max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0);
+        float spec = pow(refl, 26.0);                    // the wet highlight
+        float spark = pow(refl, 160.0);                  // and the pinpoint inside it
+        // light coming back through the far wall — this is what separates a bubble from a bead
+        float back = pow(max(dot(-L, n), 0.0), 2.5) * 0.6;
+        // thin film on the rim, phase-shifted per bead so no two are the same colour
+        vec3 iri = 0.5 + 0.5 * cos(6.2831 * (fres * 1.1 + vSeed + vec3(0.0, 0.33, 0.67)));
+
+        vec3 col = vC * (0.30 + back) + iri * fres * 1.05 + vec3(1.6) * (spec * 0.55 + spark);
+        float edge = smoothstep(1.0, 0.86, r2);          // antialiased silhouette
+        float a = (0.22 + fres * 0.62 + spec * 0.5 + spark) * edge;
+        gl_FragColor = vec4(col, a * vA * uIn);
       }`,
   }), [])
 
@@ -237,10 +262,12 @@ function Column({ geometry, height, map }) {
   const material = useMemo(() => new THREE.MeshPhysicalMaterial({
     map: map ?? null,
     color: map ? '#2a3340' : '#131a20',
-    roughness: 0.24, metalness: 0.62,
-    clearcoat: 1, clearcoatRoughness: 0.14,
-    iridescence: 1, iridescenceIOR: 2.0, iridescenceThicknessRange: [180, 820],
-    envMapIntensity: 2.3, sheen: 0.7, sheenColor: new THREE.Color('#9fd8ff'),
+    roughness: 0.2, metalness: 0.66,
+    clearcoat: 1, clearcoatRoughness: 0.12,
+    iridescence: 1, iridescenceIOR: 2.1, iridescenceThicknessRange: [160, 900],
+    // it hangs in open space now, so the only thing modelling it is reflected light — the
+    // environment has to carry more of the surface than it did against a lit backdrop
+    envMapIntensity: 3.0, sheen: 0.8, sheenColor: new THREE.Color('#9fd8ff'),
     transparent: true, opacity: 1,
   }), [map])
 

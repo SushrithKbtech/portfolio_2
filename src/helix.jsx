@@ -29,10 +29,11 @@ import Hyperspace from './hyperspace.jsx'
 const R = 7.7, PITCH = 3.15, ANGLE_SPAN = 1.42, FOCUS = 0.85, TILT = 0.19
 // START pushed out by a hero's worth of runway, so card 01 arrives after act zero has handed over
 // rather than during it. The card CADENCE is untouched: same slots, same rate per pixel.
-/* 0.95 -> 1.75. The jump, the burst and the column's assembly all happen before the gallery, and
-   the title panel needs a clear slot of its own after them — at the old value it swung through
-   the frame while the streaks were still flying. */
-const HERO_SLOTS = 1.75
+/* 0.95 -> 1.75 -> 2.90. The jump is a JOURNEY now, not a cut — it runs for two to three seconds of
+   real scrolling — so the burst, the column assembling and the title all have to start after it
+   rather than during it. The runway in index.css grows by the same ratio, which is what keeps the
+   cards moving at exactly the same rate per pixel scrolled. */
+const HERO_SLOTS = 2.90
 const START = 1.25 + HERO_SLOTS
 const CARD_SLOTS = SYSTEMS.length + START - 0.4
 const FINALE_SLOTS = 3.05
@@ -40,25 +41,58 @@ const TOTAL_SLOTS = CARD_SLOTS + FINALE_SLOTS
 const FIN_FROM = CARD_SLOTS / TOTAL_SLOTS + 0.012
 const HUE = new THREE.Color(), WHITE = new THREE.Color('#ffffff')
 
-// A flat rounded panel with proper 0..1 UVs. ShapeGeometry's own UVs are in shape space,
-// so the texture has to be re-mapped across the bounding box or it comes out garbage.
-function roundedPanel(w, h, r) {
-  const s = new THREE.Shape()
-  s.moveTo(-w/2+r, -h/2)
-  s.lineTo(w/2-r,-h/2); s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r)
-  s.lineTo(w/2,h/2-r);  s.quadraticCurveTo(w/2,h/2,w/2-r,h/2)
-  s.lineTo(-w/2+r,h/2); s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r)
-  s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2)
-  const g = new THREE.ShapeGeometry(s, 22)
+/* THE PANELS ARE CURVED, not flat cards.
+   A screen bent away from you at both edges has depth on its own — it catches the light along the
+   bend and its silhouette changes as it turns — which is the whole difference between a picture
+   stuck on a rectangle and a display standing in the room.
+
+   BEND is a coefficient, not an angle, and every layer of the card uses the SAME z(x) so the
+   frame, the backing and the artwork stay exactly parallel however wide each one is: a flat z
+   offset then separates them correctly all the way to the corners.
+
+   Rounded corners are NOT in this geometry any more. A bent surface needs interior vertices to
+   bend smoothly, and ShapeGeometry only puts them on the outline — so the corners are cut by an
+   alpha mask instead, which is free and antialiases better than a polygon edge ever did. */
+const BEND = 0.052
+
+function curvedPanel(w, h) {
+  const g = new THREE.PlaneGeometry(w, h, 30, 8)
   const pos = g.attributes.position
-  const uv = new Float32Array(pos.count * 2)
-  for (let i = 0; i < pos.count; i++) {
-    uv[i*2]   = (pos.getX(i) + w/2) / w
-    uv[i*2+1] = (pos.getY(i) + h/2) / h
-  }
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  for (let i = 0; i < pos.count; i++) pos.setZ(i, -pos.getX(i) * pos.getX(i) * BEND)
+  pos.needsUpdate = true
+  g.computeVertexNormals()
   return g
 }
+
+// White rounded rectangle on black, used as an alphaMap: three multiplies the fragment's alpha by
+// it, so the corners come off every layer of the card at once with a soft edge.
+function cornerMask(w, h, r) {
+  const S = 512, H = Math.round(S * h / w), rr = r / w * S
+  const c = document.createElement('canvas')
+  c.width = S; c.height = H
+  const g = c.getContext('2d')
+  g.fillStyle = '#000'; g.fillRect(0, 0, S, H)
+  g.fillStyle = '#fff'
+  g.beginPath()
+  if (g.roundRect) g.roundRect(0, 0, S, H, rr)
+  else {
+    g.moveTo(rr, 0); g.lineTo(S - rr, 0); g.quadraticCurveTo(S, 0, S, rr)
+    g.lineTo(S, H - rr); g.quadraticCurveTo(S, H, S - rr, H)
+    g.lineTo(rr, H); g.quadraticCurveTo(0, H, 0, H - rr)
+    g.lineTo(0, rr); g.quadraticCurveTo(0, 0, rr, 0)
+  }
+  g.fill()
+  return new THREE.CanvasTexture(c)
+}
+
+/* Seven cards, one geometry and one mask each for the artwork and the frame. Built on first use
+   and shared: identical panels have no business owning identical buffers. */
+const CARD_W = 6.7, CARD_H = 4.26, FRAME_W = 6.86, FRAME_H = 4.42
+const once = fn => { let v; return () => (v ??= fn()) }
+const cardGeo  = once(() => curvedPanel(CARD_W, CARD_H))
+const frameGeo = once(() => curvedPanel(FRAME_W, FRAME_H))
+const cardMask  = once(() => cornerMask(CARD_W, CARD_H, 0.19))
+const frameMask = once(() => cornerMask(FRAME_W, FRAME_H, 0.22))
 
 /* Browsers refuse autoplay until the page has been interacted with. */
 const PENDING = new Set()
@@ -68,54 +102,116 @@ if (typeof window !== 'undefined') {
   window.addEventListener('wheel', kick, { once: true, passive: true })
 }
 
-/* THE TITLE, ON THE SAME TRACK AS THE WORK.
+/* THE TITLE, ON THE SAME TRACK AS THE WORK — AND ALIVE ON IT.
    It used to be a DOM card pinned to the middle of the screen, which meant the one element
-   announcing the gallery was the one element not in the gallery's space. This rides the identical
-   helix the panels ride — same radius, same pitch, same easing — a slot and a half ahead of the
-   first project, so it swings round the column, squares up to you, and carries on down as card 01
-   comes up behind it. Nothing new to learn: it IS a card, it just says what the next ones are. */
-function TitlePanel() {
-  const grp = useRef()
-  const SLOT = START - 0.9   // one beat ahead of card 01, once the column has finished assembling
-  const map = useMemo(() => {
-    const W = 1600, H = 420
+   announcing the gallery was the one element not in the gallery's space. Then it was a single flat
+   plane riding the helix, which put it in the right place but made it a decal: eight letters
+   welded into one rectangle that arrived all at once.
+
+   Now every letter is its own plane. They are laid around the SAME cylinder the cards ride, so the
+   word bends away from you at both ends, and each one drops into place a beat after the one before
+   as the word swings toward the front — then falls away in reverse as it leaves. The word assembles
+   itself in front of you rather than being carried past. */
+const WORD = 'PROJECTS'
+const TITLE_H = 1.5       // cap height in world units; every glyph plane is scaled from it
+const CURVE_R = 8.2       // the cylinder the word wraps around, close to the card helix's own R
+
+/* One canvas per glyph. Each carries its own halo, drawn with the 2D context's shadow before the
+   solid pass, so the letters read as lit rather than as white shapes cut out of the dark. */
+function glyphSet() {
+  const font = '900 210px "Montserrat", system-ui, sans-serif'
+  const m = document.createElement('canvas').getContext('2d')
+  m.font = font
+  return WORD.split('').map(ch => {
+    const adv = m.measureText(ch).width
+    const CW = Math.ceil(adv) + 150, CH = 340
     const c = document.createElement('canvas')
-    c.width = W; c.height = H
+    c.width = CW; c.height = CH
     const g = c.getContext('2d')
-    g.clearRect(0, 0, W, H)
-    g.textAlign = 'center'; g.textBaseline = 'middle'
-    g.letterSpacing = '0.1em'
-    g.font = '900 210px Montserrat, system-ui, sans-serif'
-    g.fillStyle = '#ffffff'
-    g.fillText('PROJECTS', W / 2, H / 2)
+    g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff'
+    g.shadowColor = 'rgba(150,205,255,0.9)'; g.shadowBlur = 40
+    g.fillText(ch, CW / 2, CH / 2)
+    g.shadowBlur = 18
+    g.fillText(ch, CW / 2, CH / 2)
+    g.shadowBlur = 0
+    g.fillText(ch, CW / 2, CH / 2)
     const t = new THREE.CanvasTexture(c)
     t.colorSpace = THREE.SRGBColorSpace
     t.anisotropy = 8
-    return t
-  }, [])
+    return { tex: t, w: (CW / CH) * TITLE_H, adv: (adv / CH) * TITLE_H }
+  })
+}
+
+function TitlePanel() {
+  const grp = useRef()
+  const kids = useRef([])
+  const SLOT = START - 0.8   // one beat ahead of card 01, once the column has finished assembling
+  // Montserrat is self-hosted with font-display:block, so the first draw can land on the fallback.
+  // Redrawing once the face has actually loaded costs eight small canvases, one time.
+  const [ver, setVer] = useState(0)
+  useEffect(() => { document.fonts?.ready.then(() => setVer(v => v + 1)) }, [])
+  const letters = useMemo(() => glyphSet(), [ver])
+
+  // lay the glyphs out along the arc, centred on the middle of the word
+  const laid = useMemo(() => {
+    const track = 1.16                                   // letter-spacing
+    const total = letters.reduce((a, l) => a + l.adv * track, 0)
+    let x = -total / 2
+    return letters.map(l => {
+      const cx = x + l.adv * track / 2
+      x += l.adv * track
+      return { ...l, a: cx / CURVE_R }                   // arc angle for this glyph
+    })
+  }, [letters])
 
   useFrame(({ clock }) => {
     const g = grp.current; if (!g) return
+    const time = clock.elapsedTime
     const t = scroll.p * TOTAL_SLOTS - SLOT
     const angle = t * ANGLE_SPAN
     g.position.set(Math.sin(angle) * R, t * PITCH, Math.cos(angle) * R)
     const w = 1 - THREE.MathUtils.clamp(Math.abs(t) / FOCUS, 0, 1)
     const ease = w * w * (3 - 2 * w)
     g.rotation.y = angle * (1 - ease)
-    g.rotation.z = -t * TILT * (1 - ease * 0.55) + Math.sin(clock.elapsedTime * 0.5) * 0.012
+    g.rotation.z = -t * TILT * (1 - ease * 0.55) + Math.sin(time * 0.5) * 0.012
     g.rotation.x = t * 0.055 * (1 - ease)
     const near = Math.max(0, 1 - Math.abs(t) / 2.4)
     g.scale.setScalar((0.78 + near * near * 0.3) * 0.72 * scroll.bloom)
     g.visible = Math.abs(t) < 3.1 && scroll.bloom > 0.05 && scroll.fin < 0.5
+    if (!g.visible) return
+
+    // the approach, 0 a slot and a half out, 1 square-on — and the departure, which runs the
+    // same collapse backwards so the last letter in is the first letter out
+    const inN  = THREE.MathUtils.clamp((t + 1.5) / 1.5, 0, 1)
+    const outN = THREE.MathUtils.clamp((t - 0.55) / 1.1, 0, 1)
+    const n = laid.length
+    for (let i = 0; i < n; i++) {
+      const o = kids.current[i]; if (!o) return
+      const kIn  = THREE.MathUtils.clamp((inN - i * 0.052) / 0.5, 0, 1)
+      const kOut = THREE.MathUtils.clamp((outN - (n - 1 - i) * 0.052) / 0.5, 0, 1)
+      const e = (1 - Math.pow(1 - kIn, 3)) * (1 - kOut * kOut)
+      const s = 1 - e
+      o.position.y = -s * 1.1 + Math.sin(time * 1.5 + i * 0.7) * 0.03
+      o.rotation.x = s * 1.5
+      o.rotation.z = s * 0.3 * (i % 2 ? 1 : -1) + Math.sin(time * 1.1 + i) * 0.013
+      o.scale.setScalar(0.7 + e * 0.3)
+      o.material.opacity = e
+    }
   })
 
   return (
     <group ref={grp}>
-      <mesh renderOrder={2}>
-        <planeGeometry args={[7.4, 1.94]} />
-        <meshBasicMaterial map={map} transparent toneMapped={false} side={THREE.DoubleSide}
-          depthWrite={false} />
-      </mesh>
+      {laid.map((l, i) => (
+        /* each glyph stands on the cylinder and turns with it — that is the curve */
+        <group key={i} position={[Math.sin(l.a) * CURVE_R, 0, Math.cos(l.a) * CURVE_R - CURVE_R]}
+          rotation={[0, l.a, 0]}>
+          <mesh ref={el => { kids.current[i] = el }} renderOrder={2}>
+            <planeGeometry args={[l.w, TITLE_H]} />
+            <meshBasicMaterial map={l.tex} transparent toneMapped={false} opacity={0}
+              side={THREE.DoubleSide} depthWrite={false} />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
@@ -149,9 +245,9 @@ function Card({ sys, i, onFocus }) {
     return () => { vid.pause(); PENDING.delete(vid); vid.remove(); vid.removeAttribute('src'); vid.load() }
   }, [vid, i])
 
-  const panel = useMemo(() => roundedPanel(6.7, 4.26, 0.17), [])
+  const panel = cardGeo()
   // a hair larger, sitting just behind: the sliver that shows past the poster is the frame
-  const frame = useMemo(() => roundedPanel(6.86, 4.42, 0.2), [])
+  const frame = frameGeo()
   const was = useRef(false)
   const playing = useRef(false)
   const focused = useRef(0)   // how square-on this panel is, read by the click handler
@@ -217,18 +313,18 @@ function Card({ sys, i, onFocus }) {
           the poster now reads against near-black instead of against whatever is behind the card. */}
       {/* WARM EDGE. The reference's panels are bounded by a thin gold rule, which is what stops
           them dissolving into the dark scene behind them. */}
-      <mesh geometry={frame} position={[0, 0, -0.02]} renderOrder={0}>
+      <mesh geometry={frame} position={[0, 0, -0.022]} renderOrder={0}>
         <meshBasicMaterial color="#c9ab74" toneMapped={false} side={THREE.DoubleSide}
-          transparent opacity={0.88} depthWrite={false} />
+          alphaMap={frameMask()} transparent opacity={0.88} depthWrite={false} />
       </mesh>
       <mesh geometry={panel} position={[0, 0, -0.012]} renderOrder={1}>
         <meshBasicMaterial color="#04060d" toneMapped={false} side={THREE.DoubleSide}
-          transparent opacity={0.94} depthWrite={false} />
+          alphaMap={cardMask()} transparent opacity={0.94} depthWrite={false} />
       </mesh>
       <mesh geometry={panel} renderOrder={2}
         onClick={open} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
         <meshBasicMaterial ref={matRef} map={poster} toneMapped={false} side={THREE.DoubleSide}
-          transparent opacity={1} depthWrite={false} />
+          alphaMap={cardMask()} transparent opacity={1} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -244,38 +340,57 @@ function Rig() {
     }
     window.addEventListener('pointermove', h); return () => window.removeEventListener('pointermove', h)
   }, [])
-  useFrame(() => {
+  useFrame((_, dt) => {
     /* THE JUMP IS YOUR SCROLL. `speed` is the gap still to be closed between where the page is and
        where you have asked it to be — big while you are actively scrolling, zero the moment you
        stop. Eased asymmetrically: it builds fast so a flick registers immediately, and decays
        slowly so the streaks trail off rather than snapping to points. */
     const gap = Math.min(1, Math.abs(scroll.target - scroll.p) * 26)
     scroll.speed += (gap - scroll.speed) * (gap > scroll.speed ? 0.35 : 0.06)
-    scroll.p += (scroll.target - scroll.p)*0.062
+    /* THE JUMP TAKES ITS TIME — TWO AND A HALF SECONDS OF IT, whatever you do to the wheel.
+       Everywhere else the page simply chases your scroll at 0.062 a frame. Inside the jump that
+       is slowed AND, more importantly, rate-limited: progress may not advance faster than 0.05 of
+       the runway per second, so one hard flick that would otherwise cross the whole flight in five
+       frames instead flies it at cruising speed. It is still entirely yours — stop and it stops,
+       scroll back and it reverses — it just cannot be skipped.
+
+       Per SECOND, not per frame: a 144Hz display would otherwise run the same jump at 2.4x. */
+    const inJump = THREE.MathUtils.smoothstep(scroll.p, 0.020, 0.045)
+                 * (1 - THREE.MathUtils.smoothstep(scroll.p, 0.155, 0.265))
+    const step = (scroll.target - scroll.p) * (0.062 - 0.034 * inJump)
+    // the ceiling itself is interpolated, not switched: at 0.05 of the runway a second inside the
+    // jump and four outside it, coming out of the flight accelerates rather than snapping loose
+    const cap = (0.05 + (1 - inJump) * 4.0) * Math.min(dt, 0.05)
+    scroll.p += THREE.MathUtils.clamp(step, -cap, cap)
     const p = scroll.p
 
     /* THE JUMP, then the burst, then the bone. No cut anywhere in it:
-         0.000-0.030  the hero holds
-         0.030-0.100  you fly INTO the monogram and through the wall; streaks stretch out
-         0.090-0.125  the burst — the field detonates from a point out in open space
-         0.098-0.170  the swarm converges and the column assembles from it
-       Each window overlaps the next, so no beat ever finishes before its successor starts. */
-    scroll.warp    = THREE.MathUtils.smoothstep(p, 0.030, 0.100)
-    scroll.heroOut = THREE.MathUtils.smoothstep(p, 0.055, 0.098)
+         0.000-0.035  the hero holds
+         0.035-0.155  you fly INTO the monogram and through the wall; streaks stretch out
+         0.140-0.215  the burst — the field detonates from a point out in open space
+         0.148-0.212  the swarm converges and the column assembles from it
+       Each window overlaps the next, so no beat ever finishes before its successor starts.
+
+       THE JUMP IS 0.12 OF THE RUNWAY, roughly a fifth of a mile of scrolling — it was 0.07 and it
+       played out almost instantly. Distance alone is not enough though: someone who flicks the
+       wheel hard would still cross it in a few frames, which is why the easing below slows down
+       inside this window rather than the window simply being wider. */
+    scroll.warp    = THREE.MathUtils.smoothstep(p, 0.035, 0.155)
+    scroll.heroOut = THREE.MathUtils.smoothstep(p, 0.065, 0.150)
     /* YOU GO THROUGH THE LIGHT. The beacon has been growing in front of you for the whole jump;
-       this is the instant you reach it. Full cover, but narrow — under a hundredth of the scroll
-       — so it reads as passing through rather than as a curtain. Everything of the next section
-       is already in place underneath by the time it clears. */
-    scroll.flash   = Math.exp(-Math.pow((p - 0.103) / 0.013, 2))
-    scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.088, 0.150)
+       this is the instant you reach it. Full cover, but narrow, so it reads as passing through
+       rather than as a curtain. Everything of the next section is already in place underneath by
+       the time it clears. */
+    scroll.flash   = Math.exp(-Math.pow((p - 0.166) / 0.016, 2))
+    scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.140, 0.220)
     // the column's whole entrance sits under the flash, so you never watch it arrive
-    scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.095, 0.145)
+    scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.148, 0.215)
     scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.97)
     /* THE CLOSE. It starts the moment the last project has gone past rather than in the final few
        percent: the garden dissolves to black from 0.76, the phone is up by 0.90, and the apps land
        one at a time across the rest — so the end of the scroll is the fourth one arriving. */
-    scroll.contact = THREE.MathUtils.smoothstep(p, 0.76, 0.90)
-    scroll.contactApps = THREE.MathUtils.clamp((p - 0.845) / 0.150, 0, 1)
+    scroll.contact = THREE.MathUtils.smoothstep(p, 0.780, 0.915)
+    scroll.contactApps = THREE.MathUtils.clamp((p - 0.862) / 0.138, 0, 1)
     scroll.gardenY = p * TOTAL_SLOTS * PITCH * 0.42
 
     const idx = THREE.MathUtils.clamp(Math.round(p * TOTAL_SLOTS - START), 0, SYSTEMS.length - 1)
@@ -404,15 +519,15 @@ export default function Helix() {
     const forced = parseFloat(new URLSearchParams(location.search).get('s'))
     if (!Number.isNaN(forced)) {
       scroll.target = forced; scroll.p = forced
-      setGone(forced > 0.06); setInWork(forced > 0.21 && forced < FIN_FROM + 0.03)
+      setGone(forced > 0.045); setInWork(forced > 0.26 && forced < FIN_FROM + 0.03)
       return
     }
     const lenis = new Lenis({ duration: 1.5, smoothWheel: true, wheelMultiplier: 0.85 })
     lenisRef.current = lenis
     lenis.on('scroll', ({ progress }) => {
       scroll.target = progress
-      setGone(progress > 0.06)
-      setInWork(progress > 0.21 && progress < FIN_FROM + 0.03)
+      setGone(progress > 0.045)
+      setInWork(progress > 0.26 && progress < FIN_FROM + 0.03)
     })
     let raf; const loop = t => { lenis.raf(t); raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop)

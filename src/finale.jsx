@@ -138,11 +138,12 @@ function Grove() {
 
   useFrame(({ clock }) => {
     const fin = scroll.fin, t = clock.elapsedTime
-    /* THE PLATE ARRIVES WITH THE PLANTING, not with the statuary. The project gallery used to run
-       against pure black, which made the point-cloud trees look like they were floating in space;
-       the garden backdrop behind them gives the whole middle act somewhere to be. It comes in at
-       80% with the bloom and goes to full once you're down on the floor. */
-    const early = Math.max(scroll.bloom * 0.8, fin)
+    /* THE PLATE BELONGS TO THE GARDEN. It used to come up to 80% the moment the field bloomed,
+       which put a wall of foliage behind the whole project gallery — and the gallery is meant to
+       be OPEN SPACE now: a column and seven panels hanging in the dark with stars behind them.
+       So it holds at a tenth through the middle act — just enough that the garden is already
+       faintly there rather than switching on — and goes to full once you're down on the floor. */
+    const early = Math.max(scroll.bloom * 0.1, THREE.MathUtils.smoothstep(fin, 0, 0.55))
     matBack.uniforms.uOpacity.value = early
     // the foreground ivy stays finale-only — over the cards it would just be leaves on the work
     matFore.uniforms.uOpacity.value = fin * 0.95

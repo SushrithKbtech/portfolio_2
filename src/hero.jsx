@@ -109,7 +109,14 @@ function stripTexture(text, tracking) {
   // fit exactly one repeat to the canvas so fract() wrapping never shows a seam
   px = Math.floor(px * (W * 0.99) / g.measureText(text).width)
   g.font = `${f.weight} ${px}px ${f.stack}`
-  g.fillText(text, W / 2, H / 2)
+  /* THE TYPE IS THE LIGHT IN THIS ROOM. Drawn three times — a wide soft pass, a tight one, then
+     the solid letter — so the strip carries its own halo and the wall GLOWS around the words
+     instead of stencilling them out of the dark. Baked into the texture once, so it costs the
+     shader nothing at all. */
+  g.shadowColor = 'rgba(255,255,255,0.9)'
+  g.shadowBlur = 38; g.fillText(text, W / 2, H / 2)
+  g.shadowBlur = 15; g.fillText(text, W / 2, H / 2)
+  g.shadowBlur = 0;  g.fillText(text, W / 2, H / 2)
   const t = new THREE.CanvasTexture(c)
   t.wrapS = THREE.RepeatWrapping
   t.wrapT = THREE.ClampToEdgeWrapping
@@ -212,10 +219,11 @@ export function HeroRoom() {
         // --- what's playing on the live ones: slow bands and a rolling refresh line
         float bands = 0.5 + 0.5 * sin(f.y * 16.0 + uT * (0.4 + n2 * 0.6) + n * 40.0);
         float roll  = smoothstep(0.08, 0.0, abs(fract(f.y - uT * 0.09 * (0.4 + n2)) - 0.5));
-        // A DARK ROOM WITH A FEW LIT PANELS, not a video wall. The reference is nearly black:
-        // the grid is the brightest thing on it and the colour is a wash across a handful of
-        // panels, so the object in front stays the subject.
-        float content = pat * (0.10 + bands * 0.16 + roll * 0.22);
+        /* A THEATRE WITH THE HOUSE LIGHTS DOWN. The room is nearly black and the only things in
+           it that emit are the LED panels and the type running across them — everything else,
+           the grid, the bezels, the crosshairs, is barely there. Halving the content and cutting
+           the wire to a quarter is what turns a video wall into a dark auditorium. */
+        float content = pat * (0.055 + bands * 0.085 + roll * 0.13);
 
         // --- THE SPILL. Every bit of blue in the reference comes off the object and lands on the
         // wall behind it: brightest square in the middle of the frame, falling away fast.
@@ -269,7 +277,7 @@ export function HeroRoom() {
             ticker += texture2D(uRoles, vec2(u3, band3)).r * 0.68;
           }
         }
-        ticker *= (0.35 + 0.65 * bezel) * uTicker;        // the bezel eats the letters at panel edges
+        ticker *= (0.52 + 0.48 * bezel) * uTicker;        // the bezel eats the letters at panel edges
 
         /* THE DOT MATRIX. Everything the wall emits — the programmes, the tickers, the spill —
            is pushed through a grid of round emitters with dark gaps between them, the way a real
@@ -280,15 +288,18 @@ export function HeroRoom() {
         float dot = smoothstep(0.52, 0.24, length(lp - 0.5));
         float gap = 0.86 + 0.14 * dot;
 
-        vec3 base = vec3(0.012, 0.015, 0.028);
+        vec3 base = vec3(0.004, 0.005, 0.011);
         vec3 wire = vec3(0.62, 0.70, 1.00);
         vec3 glow = vec3(0.72, 0.80, 1.00);   // what the letters are lit in
 
         vec3 col = base * face * gap;
         // the spill takes the current programme's colour too, so the whole room turns together
-        col += tint * (content * 1.05 + spill * 0.16 * (0.5 + 0.5 * n)) * dot;
-        col += glow * ticker * (0.42 + spill * 0.7) * dot;
-        col += wire * (line * 0.55 + plus * 0.8 + tri) * (0.5 + spill * 0.5);
+        col += tint * (content + spill * 0.07 * (0.5 + 0.5 * n)) * dot;
+        /* THE WORDS ARE THE BRIGHTEST THING ON THE WALL, and they only half go through the dot
+           matrix — pushed fully through it the letters lost more light than they could spare in a
+           room this dark, and the halo baked into the strip died with them. */
+        col += glow * ticker * (0.95 + spill * 1.25) * (0.55 + 0.45 * dot);
+        col += wire * (line * 0.13 + plus * 0.2 + tri * 0.45) * (0.35 + spill * 0.5);
         col *= depth;
 
         // LED sub-pixel scanlines, fine enough to read as panel structure rather than CRT
@@ -299,7 +310,7 @@ export function HeroRoom() {
   }), [])
 
   const ref = useRef()
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     mat.uniforms.uT.value = clock.elapsedTime
     // Dims out as act one takes over, and then LEAVES. At a residual 2% the ticker was still
     // legible through the planting three acts later. It does NOT come back for the title beat:
@@ -310,7 +321,9 @@ export function HeroRoom() {
       /* THE WALL COMES AT YOU. During the jump it rushes forward and passes the lens — the
          panels swell, slide off every edge and are gone behind you. Nothing fades out here;
          it leaves through the viewer, which is why no cut is needed on the far side. */
-      ref.current.position.z = -3 + scroll.warp * 34
+      // measured off the camera for the same reason as the monogram: the wall's near face has to
+      // get past you, and how far back the camera sits depends on the shape of the screen
+      ref.current.position.z = -3 + scroll.warp * (camera.position.z + 21)
       ref.current.visible = on > 0.005 && scroll.warp < 0.995
     }
   })
@@ -440,7 +453,7 @@ function Glass({ geometry }) {
   const mat = useRef()
   const s = useCursorSpin()
 
-  useFrame(({ clock }, dt) => {
+  useFrame(({ clock, camera }, dt) => {
     const o = ref.current; if (!o) return
     const c = s.current
     const step = Math.min(dt, 0.05)
@@ -470,10 +483,15 @@ function Glass({ geometry }) {
        passes either side of you. It does not shrink and it does not fade — going through it is
        the transition. */
     const w = scroll.warp
-    o.position.z = 1.6 + w * w * 15.0
-    o.scale.setScalar(2.45 * (1 + w * 1.5))
+    /* IT HAS TO CLEAR THE LENS. The throw is measured against where the camera actually is —
+       which changes with the aspect ratio, since a narrow screen is shot from further back — so
+       the monogram passes behind you on every device instead of being switched off while it still
+       fills the frame. At the old fixed 15 units it vanished mid-flight, and on a jump this long
+       that pop was in plain sight rather than buried under the flash. */
+    o.position.z = 1.6 + w * w * (camera.position.z + 5 - 1.6)
+    o.scale.setScalar(2.45 * (1 + w * 1.8))
     if (mat.current) mat.current.opacity = 1
-    o.visible = w < 0.92
+    o.visible = w < 0.995
   })
 
   return (

@@ -74,7 +74,9 @@ function Field({ geometry }) {
     const t = clock.elapsedTime
     // Nearly out in act three — the pink petals fight the green night garden badly, and the
     // reference has none of them.
-    material.opacity = 0.5 * (1 - scroll.fin * 0.94)
+    // held back through the gallery for the same reason the planting is — see garden.jsx
+    material.opacity = 0.5 * (0.4 + 0.6 * THREE.MathUtils.smoothstep(scroll.fin, 0.0, 0.5))
+      * (1 - scroll.fin * 0.94)
     const lift = scroll.gardenY
     for (let i = 0; i < COUNT; i++) {
       const p = seeds[i]

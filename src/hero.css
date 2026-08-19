@@ -265,10 +265,12 @@ nav .enter:hover{border-color:rgba(180,198,255,.8);background:rgba(120,150,255,.
 canvas.gl, .gl canvas, .cs-canvas canvas{
   filter:saturate(1.22) contrast(1.06) brightness(1.03)}
 
-/* the perimeter grade was tuned against a bloomed image; ease it off so the corners aren't muddy */
+/* THE HOUSE LIGHTS ARE DOWN. A theatre is not evenly lit — it is black at the walls and holds
+   light only where the screen is — so the perimeter comes in tighter and lands nearly at black,
+   with just enough blue left in the floor to keep the corners from going dead flat. */
 .falloff{background:
-  radial-gradient(ellipse 82% 74% at 50% 50%,transparent 40%,rgba(5,8,22,.5) 80%,rgba(2,3,8,.88) 100%),
-  radial-gradient(ellipse 120% 90% at 50% 120%,rgba(40,52,120,.34),transparent 60%)}
+  radial-gradient(ellipse 72% 64% at 50% 50%,transparent 26%,rgba(3,5,14,.66) 72%,rgba(1,1,4,.97) 100%),
+  radial-gradient(ellipse 120% 90% at 50% 122%,rgba(34,44,110,.26),transparent 58%)}
 
 /* EVERY STATE CHANGE EASES. Nothing on the page is allowed to snap between states any more. */
 .ghosts,.hud,.scrollcue,.cap{transition:opacity .9s cubic-bezier(.4,0,.2,1)}
