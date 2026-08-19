@@ -343,7 +343,10 @@ export default function Garden() {
     material.uniforms.uAct3.value = scroll.fin
     material.uniforms.uIn.value = THREE.MathUtils.smoothstep(scroll.bloom, 0.0, 0.14)
     // full through the burst, down to 40% for the gallery, back up as the garden claims the frame
-    material.uniforms.uSpace.value = 1 - 0.8 * THREE.MathUtils.smoothstep(scroll.bloom, 0.35, 0.85)
+    // 0.2 -> 0.55 through the gallery: at a fifth the planting had gone from a green haze to
+    // almost nothing, and the green points around the column are half of what makes the middle
+    // act feel alive. This is the balance — deep space you can still see growing things in.
+    material.uniforms.uSpace.value = 1 - 0.45 * THREE.MathUtils.smoothstep(scroll.bloom, 0.35, 0.85)
       * (1 - THREE.MathUtils.smoothstep(scroll.fin, 0.0, 0.5))
     // narrower window: at 0.075 the overexposure hung around for a good stretch of scroll, which
     // made it read as a white haze rather than as a hit

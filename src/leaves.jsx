@@ -137,27 +137,31 @@ function dustTexture() {
 
 export default function Leaves({ height = 20 }) {
   const blade = useRef(), dust = useRef()
-  const N = Math.max(18, Math.round(90 * budget))
+  const N = Math.max(26, Math.round(150 * budget))
   const bladeMap = useMemo(() => bladeTexture(), [])
   const dustMap = useMemo(() => dustTexture(), [])
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
   const items = useMemo(() => {
-    // clumped, not sprinkled: leaves come off the column in groups with clear dark between them
-    const CLUMPS = 12
+    /* Loosely grouped, NOT bunched. At a dozen anchors on a narrow belt the leaves piled into
+       one corner of the frame and left the rest of the column bare — a clump of twelve reads as
+       one clump. Nearly one anchor per leaf, spread over a much wider belt and the full height of
+       the column, keeps the pairing that makes them look grown rather than sprinkled while
+       putting them all the way around you. */
+    const CLUMPS = Math.max(6, Math.round(N * 0.7))
     const anchors = Array.from({ length: CLUMPS }, () => ({
       a: Math.random() * Math.PI * 2,
-      r: 2.8 + Math.random() * 3.4,
-      y: (Math.random() - 0.5) * height * 0.9,
+      r: 3.0 + Math.random() * 6.5,
+      y: (Math.random() - 0.5) * height * 1.12,
     }))
     // the reference's range: cream and gold through to cyan, with the odd cool violet
     const pal = ['#ffe6b0', '#ffd489', '#fff3d6', '#8fe8ff', '#6ecfff', '#bfe8ff', '#c9a3ff']
     return Array.from({ length: N }, (_, i) => {
       const k = anchors[i % CLUMPS]
       return {
-        a: k.a + (Math.random() - 0.5) * 0.9,
-        r: k.r + (Math.random() - 0.5) * 2.4,
-        y: k.y + (Math.random() - 0.5) * height * 0.24,
+        a: k.a + (Math.random() - 0.5) * 1.3,
+        r: k.r + (Math.random() - 0.5) * 2.6,
+        y: k.y + (Math.random() - 0.5) * height * 0.3,
         s: 1.1 + Math.pow(Math.random(), 1.7) * 2.5,
         ph: Math.random() * Math.PI * 2,
         bob: 0.16 + Math.random() * 0.26,
