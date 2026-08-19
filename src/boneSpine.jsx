@@ -153,16 +153,16 @@ function Column({ geometry, height, map }) {
     if (!m) return
     // start at the cervical end, arrive at the sacrum as the scroll completes
     const travel = Math.max(0, height - 13)
-    // ...and in act three it retreats to the apex of the V and drives its sacrum down THROUGH the
-    // ground plane, which is opaque — so the column simply disappears into the earth behind the
-    // main bust instead of stopping dead on the surface.
-    // The column ENTERS from above rather than being there from frame one: at spineIn 0 it sits
-    // a full height up, out of frame, so the opening is just the sigil on black.
-    const entry = (1 - scroll.spineIn) * (height * 0.85)
+    /* IT DOES NOT DROP IN. The column used to sit a full height above the frame at spineIn 0 and
+       fall into place as the flash cleared, which read as scenery being lowered on a wire — you
+       could see it arriving from somewhere. It is simply THERE, in the position it holds for the
+       rest of the scroll, and what changes is only how much of it has resolved: the swarm
+       converging onto its surface and the solid mesh fading up out of that. You come through the
+       light and the column is standing in front of you. */
     // the GROUP carries the travel, so the shed dust rides with the column without spinning with it
     const g = grp.current
     if (g) {
-      g.position.y = -travel / 2 + scroll.p * travel - scroll.fin * 1.6 + entry
+      g.position.y = -travel / 2 + scroll.p * travel - scroll.fin * 1.6
       g.position.z = -scroll.fin * 19    // retreats as the garden takes over
     }
     // THE COLUMN LEAVES WITH THE WORK. It belongs to the project act; once the last panel has gone
