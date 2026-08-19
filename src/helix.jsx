@@ -386,23 +386,23 @@ function Rig() {
     scroll.bloom   = THREE.MathUtils.smoothstep(p, 0.140, 0.220)
     // the column's whole entrance sits under the flash, so you never watch it arrive
     scroll.spineIn = THREE.MathUtils.smoothstep(p, 0.148, 0.215)
-    /* The garden act is COMPRESSED, and deliberately: it used to run all the way to 0.97, which
-       left it arriving under the close rather than before it. It is fully planted by 0.875 and
-       then holds — it gets its own stretch of frame, and only after that does the picture start
-       breaking up. */
-    scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM, 0.875)
+    /* THERE IS NO SEPARATE GARDEN ACT ANY MORE. The planting is up from the burst and stays up,
+       so `fin` is no longer "the garden arrives" — it is only the clearing-away: the column and
+       the leaves leaving, the camera settling back. It runs LATE and entirely underneath the
+       break-up, so the last thing you see of the work is the work itself, whole. */
+    scroll.fin     = THREE.MathUtils.smoothstep(p, FIN_FROM + 0.042, 0.93)
     /* THE CLOSE, IN THREE BEATS THAT DO NOT OVERLAP. The last project goes past, the frame
        breaks up into blocks and turns to black, and then — on an empty screen — the handset
        opens out of a seam of light and the apps land on it one at a time. Each beat finishes
        before the next begins, because the whole point is that the phone is not there and then
        it is. */
-    scroll.contact = THREE.MathUtils.smoothstep(p, 0.878, 0.930)   // the frame coming apart
+    scroll.contact = THREE.MathUtils.smoothstep(p, 0.795, 0.855)   // the frame coming apart
     /* NO DEAD AIR. The last blocks turn black around 0.85 of `contact` — the flip's own wave
        finishes well before its progress value reaches 1 — so the seam of light starts THERE, not
        at the end of it. Held back any later there was a third of a screen of scrolling with
        nothing on it, which turns a trick into a wait. */
-    scroll.reveal = THREE.MathUtils.smoothstep(p, 0.915, 0.958)    // the handset appearing
-    scroll.contactApps = THREE.MathUtils.clamp((p - 0.950) / 0.050, 0, 1)
+    scroll.reveal = THREE.MathUtils.smoothstep(p, 0.840, 0.892)    // the handset appearing
+    scroll.contactApps = THREE.MathUtils.clamp((p - 0.888) / 0.080, 0, 1)
     scroll.gardenY = p * TOTAL_SLOTS * PITCH * 0.42
 
     const idx = THREE.MathUtils.clamp(Math.round(p * TOTAL_SLOTS - START), 0, SYSTEMS.length - 1)

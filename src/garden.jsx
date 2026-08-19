@@ -267,11 +267,11 @@ export default function Garden() {
       // field stays black until the detonation is already under way, so the planting reads as
       // growing OUT of the glass object rather than as a spring that was always there.
       uIn: { value: 0 },
-      // The gallery is OPEN SPACE, not a meadow. The field detonates at full strength — that beat
-      // is the whole point of it — and then settles back to well under half, so the column and the
-      // cards hang against black with stars behind them instead of against a green haze. It comes
-      // back up as the garden act takes over and the planting is the subject again.
-      uSpace: { value: 1 },
+      /* THE GARDEN IS THE WORLD, NOT THE LAST ROOM IN IT. This was briefly held back to a fifth
+         through the project act so the column would hang in open space — but the planting at full
+         strength IS the setting the whole middle of this journey wants: the column and the cards
+         stand in it, the leaves come off it, and it never dims. The uniform is gone with the
+         idea; the detonation and act three now share one continuous state. */
       // a single overexposed beat as the field leaves the seed
       uFlash: { value: 0 },
       uPix: { value: Math.min(window.devicePixelRatio, 2) },
@@ -320,7 +320,7 @@ export default function Garden() {
       }`,
     fragmentShader: `
       uniform vec3 uTint;
-      uniform float uAct3, uIn, uSpace;
+      uniform float uAct3, uIn;
       varying vec3 vC;
       varying float vA;
       void main(){
@@ -333,7 +333,7 @@ export default function Garden() {
         /* It used to fall to a quarter in act three, back when a marble bust was the subject
            and this was confetti in front of it. There is no bust any more — the PLANTING is what
            act three is — so it now holds almost all of its strength right to the end. */
-        gl_FragColor = vec4(vC * uTint, a * vA * 0.95 * (1.0 - uAct3 * 0.12) * uIn * uSpace);
+        gl_FragColor = vec4(vC * uTint, a * vA * 0.95 * (1.0 - uAct3 * 0.12) * uIn);
       }`,
   }), [])
 
@@ -342,12 +342,6 @@ export default function Garden() {
     material.uniforms.uBloom.value = scroll.bloom
     material.uniforms.uAct3.value = scroll.fin
     material.uniforms.uIn.value = THREE.MathUtils.smoothstep(scroll.bloom, 0.0, 0.14)
-    // full through the burst, down to 40% for the gallery, back up as the garden claims the frame
-    // 0.2 -> 0.55 through the gallery: at a fifth the planting had gone from a green haze to
-    // almost nothing, and the green points around the column are half of what makes the middle
-    // act feel alive. This is the balance — deep space you can still see growing things in.
-    material.uniforms.uSpace.value = 1 - 0.45 * THREE.MathUtils.smoothstep(scroll.bloom, 0.35, 0.85)
-      * (1 - THREE.MathUtils.smoothstep(scroll.fin, 0.0, 0.5))
     // narrower window: at 0.075 the overexposure hung around for a good stretch of scroll, which
     // made it read as a white haze rather than as a hit
     material.uniforms.uFlash.value = Math.exp(-Math.pow((scroll.bloom - 0.09) / 0.042, 2))

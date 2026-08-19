@@ -337,8 +337,10 @@ function Reveal() {
       const v = Math.exp(-Math.pow((r - 0.46) / 0.15, 2))
       f.visible = v > 0.01
       if (f.visible) {
-        f.scale.setScalar(1.6 + v * 6.0)
-        f.material.opacity = v * 0.8
+        // tighter and softer than it was: at full strength the flare washed the entire frame to
+        // grey, and a trick you cannot see through is just a white screen
+        f.scale.setScalar(1.4 + v * 4.2)
+        f.material.opacity = v * 0.5
       }
     }
   })
