@@ -143,7 +143,7 @@ function Starfield() {
     const g = ref.current
     if (g) {
       g.visible = mat.uniforms.uIn.value > 0.01
-      g.rotation.y = scroll.p * 0.5
+      g.rotation.y = scroll.p * 0.26
       g.position.y = -scroll.gardenY * 0.06
     }
   })
@@ -188,12 +188,12 @@ function Nebula() {
     if (a.current) {
       a.current.material.opacity = v * 0.3
       a.current.visible = v > 0.01
-      a.current.rotation.z = t * 0.008 + scroll.p * 0.4
+      a.current.rotation.z = t * 0.008 + scroll.p * 0.2
     }
     if (b.current) {
       b.current.material.opacity = v * 0.2
       b.current.visible = v > 0.01
-      b.current.rotation.z = -t * 0.006 - scroll.p * 0.3
+      b.current.rotation.z = -t * 0.006 - scroll.p * 0.15
     }
   })
 

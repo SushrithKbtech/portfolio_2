@@ -353,7 +353,8 @@ export default function Garden() {
       // THE GARDEN TURNS AS YOU DESCEND. Scroll-driven, like the column: about two-thirds of a
       // revolution across the journey, so you're always seeing new planting rather than passing
       // the same trees. The clock term underneath keeps it alive when you stop.
-      ref.current.rotation.y = scroll.p * Math.PI * 1.4 + clock.elapsedTime * 0.006
+      // halved with the column's spin, for the same reason: the planting was wheeling past
+      ref.current.rotation.y = scroll.p * Math.PI * 0.7 + clock.elapsedTime * 0.006
     }
   })
 

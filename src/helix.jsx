@@ -363,10 +363,20 @@ function Rig() {
        Per SECOND, not per frame: a 144Hz display would otherwise run the same jump at 2.4x. */
     const inJump = THREE.MathUtils.smoothstep(scroll.p, 0.020, 0.045)
                  * (1 - THREE.MathUtils.smoothstep(scroll.p, 0.155, 0.265))
-    const step = (scroll.target - scroll.p) * (0.062 - 0.034 * inJump)
-    // the ceiling itself is interpolated, not switched: at 0.05 of the runway a second inside the
-    // jump and four outside it, coming out of the flight accelerates rather than snapping loose
-    const cap = (0.05 + (1 - inJump) * 4.0) * Math.min(dt, 0.05)
+    const step = (scroll.target - scroll.p) * (0.052 - 0.034 * inJump)
+    /* A CEILING EVERYWHERE, not only in the jump. Outside it the limit used to be four runways a
+       second, which is no limit at all — a hard fling would run a third of the page past you in
+       half a second and every transition inside that stretch played at fast-forward. 0.35 a
+       second is loose enough that ordinary scrolling never touches it (it is three times what a
+       comfortable read of this page needs) and tight enough that nothing can be flung through.
+       Still interpolated rather than switched, so coming out of the jump accelerates smoothly. */
+    /* ...with one escape hatch. The Contact link asks the page to travel from wherever you are
+       to the very bottom in 2.6 seconds, and a limiter meant for reading would still be catching
+       up long after the scrollbar had stopped. A gap this large is never a scroll gesture — it is
+       a jump — so it gets a much higher ceiling, high enough to keep up and still low enough to
+       read as flying through the page rather than cutting to the end. */
+    const far = THREE.MathUtils.smoothstep(Math.abs(scroll.target - scroll.p), 0.16, 0.34)
+    const cap = ((0.05 + (1 - inJump) * 0.30) * (1 - far) + 1.5 * far) * Math.min(dt, 0.05)
     scroll.p += THREE.MathUtils.clamp(step, -cap, cap)
     const p = scroll.p
 
@@ -548,7 +558,17 @@ export default function Helix() {
       setGone(forced > 0.045); setInWork(forced > 0.222 && forced < 0.70)
       return
     }
-    const lenis = new Lenis({ duration: 1.5, smoothWheel: true, wheelMultiplier: 0.85 })
+    /* HOW MUCH JOURNEY ONE GESTURE BUYS.
+       This is the real speed control, and it was the thing actually making everything feel sped
+       up: at 0.85 a single trackpad fling delivered a couple of thousand pixels, which is a tenth
+       of the whole scroll — one flick and the jump, or the column's whole turn, had been and
+       gone. At 0.5 the same gesture covers a little over half as much, so every animation on the
+       page is read at roughly half the rate WITHOUT any of them being retimed against each other.
+       The longer duration lengthens Lenis's own glide so the deceleration is felt rather than
+       just being over. */
+    const lenis = new Lenis({
+      duration: 1.9, smoothWheel: true, wheelMultiplier: 0.5, touchMultiplier: 0.8,
+    })
     lenisRef.current = lenis
     lenis.on('scroll', ({ progress }) => {
       scroll.target = progress

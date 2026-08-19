@@ -173,7 +173,11 @@ function Column({ geometry, height, map }) {
     // SCROLL DRIVES THE SPIN. On a clock alone the column turned whether or not you were doing
     // anything; tied to progress it reads as you walking around it — roughly two and a half turns
     // across the whole journey, with a slow idle drift underneath so it never sits dead still.
-    m.rotation.y = scroll.p * Math.PI * 5 + clock.elapsedTime * 0.02
+    /* 5π -> 2.2π across the whole scroll. Two and a half revolutions meant the column spun most
+       of a full turn during the project gallery alone — every card you looked at had the bone
+       behind it whipping round, which is what made the middle of the page feel fast-forwarded.
+       Just over one turn end to end reads as walking around it. */
+    m.rotation.y = scroll.p * Math.PI * 2.2 + clock.elapsedTime * 0.02
     m.rotation.z = Math.sin(clock.elapsedTime * 0.13) * 0.02
     /* The solid mesh fades up only over the last 45% of the convergence, so the particles are
        seen to become the bone rather than dissolving into an object that was already there. */
