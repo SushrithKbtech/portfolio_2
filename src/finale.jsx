@@ -73,9 +73,9 @@ function Grass() {
 
   useFrame(({ clock }) => {
     mat.uniforms.uT.value = clock.elapsedTime
-    // the lawn comes with the planting too — the ground under the column is part of the world,
-    // not a thing that appears at the end of it
-    mat.uniforms.uFade.value = Math.max(scroll.bloom * 0.7, scroll.fin)
+    // a hint of the ground through the gallery, no more: a lit lawn is a floor, and a floor is
+    // the one thing that stops a scene reading as space
+    mat.uniforms.uFade.value = Math.max(scroll.bloom * 0.12, scroll.fin)
     mat.uniforms.uTint.value.copy(scroll.tint)
     if (ref.current) ref.current.visible = scroll.fin > 0.01
   })
@@ -140,11 +140,13 @@ function Grove() {
 
   useFrame(({ clock }) => {
     const fin = scroll.fin, t = clock.elapsedTime
-    /* THE PLATE ARRIVES WITH THE PLANTING. It comes up with the detonation, not with act three,
-       because the gallery is not a dark room the garden is next door to — the column and the
-       cards stand IN the garden for the whole middle of the scroll, and this is the depth behind
-       them. Nearly full from the burst, and the rest of the way once you are down on the floor. */
-    const early = Math.max(scroll.bloom * 0.85, THREE.MathUtils.smoothstep(fin, 0, 0.55))
+    /* THE BACKGROUND IS SPACE, and space is black. This plate is a wall of foliage — at 0.85 it
+       WAS the background through the whole gallery, and everything in front of it sat against a
+       green field rather than against nothing. The planting itself stays: the points, the flowers
+       and the leaves are all still there at full strength. What goes is the wash behind them, so
+       what you see is growing things suspended in the dark. It comes up properly only once you
+       are down on the floor and the garden is the subject. */
+    const early = Math.max(scroll.bloom * 0.08, THREE.MathUtils.smoothstep(fin, 0, 0.55))
     matBack.uniforms.uOpacity.value = early
     // the foreground ivy stays finale-only — over the cards it would just be leaves on the work
     matFore.uniforms.uOpacity.value = fin * 0.95

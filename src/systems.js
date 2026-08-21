@@ -25,7 +25,8 @@ export const SYSTEMS = [
     d:'Intrusion detection pairing a supervised MLP with an unsupervised AutoEncoder on CSE-CIC-IDS2018. 98.12% accuracy, 96.95% macro-F1, and a fusion engine that cuts false negatives on novel attacks.' },
 
   { id:'board',   n:'AI BOARDROOM',     k:'Multi-agent',  hue:['#ffffff','#8ea2ff'],
-    d:'A boardroom of AI agents — VC, skeptic, CTO, founder — that debate your startup idea from every angle and hand back a scored verdict.' },
+    repo:'https://github.com/SushrithKbtech/ai-boardroom',
+    d:'Five AI executives read your pitch, argue it out and vote — then a sixth agent with no stake in it audits every claim they made. The board has no search tool, so each outside fact has to come back from a specialist with a source attached.' },
 
   { id:'risk',    n:'RISK ASSESSMENT',  k:'Orchestration', hue:['#7cf5c0','#2b6cff'],
     live:'https://prism-risk-rho.vercel.app/',
